@@ -1,84 +1,32 @@
-<img align="right" width="150" height="150" top="100" src="./assets/blueprint.png">
+# `huffd1`
 
-# huff-project-template • [![ci](https://github.com/huff-language/huff-project-template/actions/workflows/ci.yaml/badge.svg)](https://github.com/huff-language/huff-project-template/actions/workflows/ci.yaml) ![license](https://img.shields.io/github/license/huff-language/huff-project-template.svg) ![solidity](https://img.shields.io/badge/solidity-^0.8.15-lightgrey)
+`huffd1` is a non-fungible token implementation in Huff, where the ownership of a token is given by the evaluation of a polynomial $P(x)$, defined over the finite field of prime order $p = 2^{160} - 47$, equal to `0xffffffffffffffffffffffffffffffffffffffd1` (hence the name), the largest 160-bit prime. Note that we could also use $p = 2^{160} + 7$, but I wanted all coefficients to be strictly 160-bits, which is not the case with that prime.
 
-Versatile Huff Project Template using Foundry.
+The concept works for any order actually, but we would like to use an order that can fit almost all the addresses.
 
+## TODO
 
-## Getting Started
+- have polynomial for approvals too?
+- maybe use FFI to generate the basis based on total supply via script?
 
-### Requirements
+## Usage
 
-The following will need to be installed in order to use this template. Please follow the links and instructions.
+Let's describe each function:
 
--   [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)  
-    -   You'll know you've done it right if you can run `git --version`
--   [Foundry / Foundryup](https://github.com/gakonst/foundry)
-    -   This will install `forge`, `cast`, and `anvil`
-    -   You can test you've installed them right by running `forge --version` and get an output like: `forge 0.2.0 (92f8951 2022-08-06T00:09:32.96582Z)`
-    -   To get the latest of each, just run `foundryup`
--   [Huff Compiler](https://docs.huff.sh/get-started/installing/)
-    -   You'll know you've done it right if you can run `huffc --version` and get an output like: `huffc 0.3.0`
+### `ownerOf`
 
-### Quickstart
+To find the owner of a token $t$, simply evaluate $P(t)$ and the result will be a 160-bit number corresponding to the owner address. We use Horner's method to efficiently evaluate our polynomial.
 
-1. Clone this repo or use template
+Initially, all tokens are owned by the contract deployer, which can be represented by the constant polynomial that is equal to the owner address.
 
-Click "Use this template" on [GitHub](https://github.com/huff-language/huff-project-template) to create a new repository with this repo as the initial state.
+### `balanceOf`
 
-Or run:
+To find the balance of an address, iterate over all tokens and call `ownerOf`, counting the number of matches along the way.
 
-```
-git clone https://github.com/huff-language/huff-project-template
-cd huff-project-template
-```
+### `transfer`
 
-2. Install dependencies
+To transfer a token $t$ from address $a \to b$, update $P(x)$ to be $P(x) + L_t(x)(b - a)$. Here, $L_t(x)$ is the Lagrange basis of the token, defined as a polynomial that is equal to 1 at $t$ and 0 on all other points.
 
-Once you've cloned and entered into your repository, you need to install the necessary dependencies. In order to do so, simply run:
+This operation results in multiplying the coefficients of $L_t(x)$ with $(b - a)$ which we will do via `MULMOD`, and afterwards summation of the coefficients of $P(x)$ and the resulting polynomial from previous step, using `ADDMOD`.
 
-```shell
-forge install
-```
-
-3. Build & Test
-
-To build and test your contracts, you can run:
-
-```shell
-forge build
-forge test
-```
-
-For more information on how to use Foundry, check out the [Foundry Github Repository](https://github.com/foundry-rs/foundry/tree/master/forge) and the [foundry-huff library repository](https://github.com/huff-language/foundry-huff).
-
-
-## Blueprint
-
-```ml
-lib
-├─ forge-std — https://github.com/foundry-rs/forge-std
-├─ foundry-huff — https://github.com/huff-language/foundry-huff
-scripts
-├─ Deploy.s.sol — Deployment Script
-src
-├─ SimpleStore — A Simple Storage Contract in Huff
-test
-└─ SimpleStore.t — SimpleStoreTests
-```
-
-
-## License
-
-[The Unlicense](https://github.com/huff-language/huff-project-template/blob/master/LICENSE)
-
-
-## Acknowledgements
-
-- [forge-template](https://github.com/foundry-rs/forge-template)
-- [femplate](https://github.com/abigger87/femplate)
-
-
-## Disclaimer
-
-_These smart contracts are being provided as is. No guarantee, representation or warranty is being made, express or implied, as to the safety or correctness of the user interface or the smart contracts. They have not been audited and as such there can be no assurance they will work as intended, and users may experience delays, failures, errors, omissions, loss of transmitted information or loss of funds. The creators are not liable for any of the foregoing. Users should proceed with caution and use at their own risk._
+Also note that $-a$ is obtained by $p-a$ where $p$ is the order of the finite field.

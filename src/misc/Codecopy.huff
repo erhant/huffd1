@@ -1,0 +1,28 @@
+#define table Code {
+    0x01050700020c000607  // basis: b | k = o + b(s * l)
+//    010507              |  basis: 0 | 0 = 0 + 0(1 * 3)
+//    ^     00020c        |  basis: 1 | 3 = 0 + 1(1 * 3)
+//          ^     000607  |  basis: 2 | 6 = 0 + 2(1 * 3)
+//                ^
+}
+
+#define constant LENGTH = 0x03
+#define constant COEFF_SIZE = 0x01
+
+#define macro MAIN() = {
+    // store first polynomial to memory
+    [COEFF_SIZE]
+    __tablestart(Code)
+    0x00 codecopy
+
+    // shift to remove right-padding
+    0x00 mload
+    0xF8 shr
+    0x00 mstore
+
+    0x20 0x00 return
+}
+
+// huffc -r ./src/misc/Codecopy.huff
+
+// https://www.evm.codes/playground

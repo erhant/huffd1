@@ -20,3 +20,6 @@ flattened.txt
 
 # Ignore Broadcasts
 broadcast
+
+# Python
+__pycache__

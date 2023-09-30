@@ -1,0 +1,6 @@
+#define table Basis {
+    0x01050700020c000607
+}
+#define constant TOTAL_SUPPLY = 0x3
+#define constant COEFF_SIZE = 0x1
+#define constant ORDER = 0xd

@@ -1,0 +1,263 @@
+/// @title Polynomial Arithmetic Utilities
+/// @notice SPDX-License-Identifier: MIT
+/// @author erhant <https://github.com/erhant>
+/// @dev for every [offset, length] that these macros expect in memory,
+/// it means that there are coefficients (a_0, a_1, ..., a_k) stored and
+/// any a_i can be accessed by (offset + a_i * 0x20); the corresponding
+/// polynomial is P(x) = a_0 + a_1*x + a_2*x^2 + ... + a_k*x^k
+
+/// @dev multiply coefficients by some value
+///
+/// expects `length` many words stored in memory following `offset`.
+///
+/// args:    order of polynomial
+///
+/// takes:   [offset, length, val]
+/// returns: [offset, length]
+#define macro POLY_SCALE(order) = takes (3) returns (2) {
+    // input:             [o, l, v] (offset, length, val)
+
+    // ensure val is in the field
+    <order> swap1 mod   // [o, l, v'] (v' := v % p)
+
+    // multiply len by 32 since we will go over the memory word-by-word
+    swap1               // [o, v, l]
+    0x20 mul            // [o, v, l'] (l' = l * 32)
+
+    // begin loop, starting from i := 0
+    0x00                // [o, v, l, i] (index)
+    loop_begin:
+    // [o, v, l, i]
+
+        // loop condition
+        dup2 dup2       // [o, v, l, i, l, i]
+        lt iszero       // [o, v, l, i, i >= l]
+        loop_end jumpi
+
+        // compute memory index
+        dup1 dup5       // [o, v, l, i, i, o]
+        add             // [o, v, l, i, k]          (k := o+i)
+        dup1            // [o, v, l, i, k, k]
+
+        // load coefficient from memory
+        mload           // [o, v, l, i, k, c]       (c := mem[k])
+
+        // scale
+        <order> swap1   // [o, v, l, i, k, p, c]
+        dup6            // [o, v, l, i, k, p, c, v]
+        mulmod          // [o, v, l, i, k, c']      (c' := (c * v) % p)
+
+        // load back result into memory
+        swap1 mstore    // [o, v, l, i]
+
+        // increment index one word
+        0x20 add        // [o, v, l, i']            (i' = i' + 32)
+
+    // [o, v, l, i]
+    loop_begin jump
+    loop_end:
+
+    pop swap1 pop   // [o, l]
+
+    // output:         [o, l]
+}
+
+/// @dev add two polynomials
+///
+/// expects `length` many words stored in memory following `offset_P` and `offset_Q`.
+///
+/// args:    order of polynomial
+///
+/// takes:   [offset_P, offset_Q, length]
+/// returns: [offset, length]
+#define macro POLY_ADD(order) = takes (3) returns (2) {
+    // input: [oP, oQ, l] (offset_P, offset_Q, length)
+
+    // multiply len by 32 since we will go over the memory word-by-word
+    0x20 mul    // [oP, oQ, l'] (l' = l * 32)
+
+    // begin loop, starting from i := 0
+    0x00     // [oP, oQ, l, i] (index)
+    loop_begin:
+    // [oP, oQ, l, i]
+
+        // loop condition
+        dup2 dup2       // [oP, oQ, l, i, l, i]
+        lt iszero       // [oP, oQ, l, i, i >= l]
+        loop_end jumpi
+
+        // compute memory index for the first polynomial
+        dup1 dup5       // [oP, oQ, l, i, i, oP]
+        add             // [oP, oQ, l, i, kP]           (kP := oP+i)
+        dup1            // [oP, oQ, l, i, kP, kP]
+
+        // compute memory index for the second polynomial
+        dup3 dup6       // [oP, oQ, l, i, kP, kP, i, oQ]
+        add             // [oP, oQ, l, i, kP, kP, kQ]   (kQ := oQ+i)
+
+        // load coefficients
+        mload           // [oP, oQ, l, i, kP, kP, cQ]   (cQ := mem[kQ])
+        swap1 mload     // [oP, oQ, l, i, kP, cQ, cP]   (cP := mem[kP])
+
+        // add
+        <order> swap2   // [oP, oQ, l, i, kP, p, cP, cQ]
+        addmod          // [oP, oQ, l, i, kP, c']       (c' := (c + v) % p)
+
+        // load back result into memory (at P's offset)
+        swap1 mstore    // [oP, oQ, l, i]
+
+        // increment index one word
+        0x20 add        // [oP, oQ, l, i']              (i' = i' + 32)
+
+    // [oP, oQ, l, i]
+    loop_begin jump
+    loop_end:
+
+    pop swap1 pop // [oP, l]
+
+    // output:       [oP, l]
+}
+
+/// @dev evaluate the polynomial at some point `x`
+///
+/// expects `length` many words stored in memory following `offset`.
+///
+/// uses Horner's method (https://zcash.github.io/halo2/background/polynomials.html#aside-horners-rule)
+///
+/// args:    order of polynomial
+///
+/// takes:   [offset, length, x]
+/// returns: [offset, length, v]
+#define macro POLY_EVAL(order) = takes (3) returns (3) {
+    // input:      [o, l, x] (offset, length, x)
+
+    // multiply len by 32 since we will go over the memory word-by-word
+    swap1 0x20  // [o, x, l, 32]
+    mul swap1   // [o, l', x] (l' = l * 32)
+
+    // sum accumulator starts at 0
+    0x00        // [o, l, x, s] (s := 0)
+
+    // index shall be (length - 1) * 32 = l - 32
+    0x20 dup4   // [o, l, x, s, 32, l]
+    sub         // [o, l, x, s, i] (i := l - 32)
+    loop_begin:
+    // [o, l, x, s, i]
+
+        // loop condition
+        // note that `i` is actually in range [l-1, 0] * 32, once it goes below 0
+        // it shall underflow and this condition will fail nevertheless
+        dup4 dup2       // [o, l, x, s, i, l, i]
+        lt iszero       // [o, l, x, s, i, i >= l]
+        loop_end jumpi
+
+        // compute memory index
+        dup1 dup6       // [o, l, x, s, i, i, o]
+        add             // [o, l, x, s, i, k]           (k := o+i)
+
+        // mulmod accumulator with x
+        <order> dup4    // [o, l, x, s, i, k, p, s]     (p := order)
+        dup6 mulmod     // [o, l, x, s, i, k, ss]       (ss := (s * x) % p)
+
+        // addmod accumulator with coefficient
+        <order> swap2   // [o, l, x, s, i, p, ss, k]    (p : order)
+        mload           // [o, l, x, s, i, p, ss, c]    (c := mem[k])
+        addmod          // [o, l, x, s, i, ss']         (ss' := (ss + c) % p)
+
+        // update accumulator
+        swap2 pop       // [o, l, x, s', i]             (s' := ss')
+
+        // decrement index one word
+        0x20 swap1 sub  // [o, l, x, s, i']             (i' := i - 32)
+
+    // [o, l, x, s, i]
+    loop_begin jump
+    loop_end: 
+
+    pop swap1 pop // [o, l, s]
+
+    // output:       [o, l, s] (offset, length, evaluation)
+}
+
+
+/// @dev find the offset for a basis polynomial
+///
+/// works for both memory and code offsets
+///
+/// args: size of coefficients, and the number of basis polynomials
+///
+/// takes:   [basis id]
+/// returns: [offset]
+#define macro POLY_OFFSET(size, count) = takes (1) returns (1) {
+    // input:      [b]   (basis id)
+    <size>      // [b, s]
+    <count>     // [b, s, c]
+    mul mul     // [b*s*c]
+    // output:     [o]   (offset for this basis)
+}
+
+/// @dev load coefficients from code to memory.
+///
+/// expects `length` many coefficients (each `coeffSize` bytes) in code,
+/// starting from the offset `codeOffset`.
+///
+/// there will be `length` many words stored in memory following `memOffset`.
+///
+/// takes:   [codeOffset, coeffSize, memOffset, length]
+/// returns: [memOffset, length]
+#define macro POLY_CODECOPY() = takes (4) returns (2) {
+    // input:   [oC, s, oM, l]
+
+    // compute right-shift amount (bits)
+    dup3 0x08 mul   // [oC, s, oM, l, s'] (s' := s * 8) bytes to bits
+    0x0100 sub      // [oC, s, oM, l, r]  (r  := 256 - s')
+    swap1           // [oC, s, oM, r, l]
+
+    // index starts with 0
+    0x00            // [oC, s, oM, r, l, i] (i := 0)
+    loop_begin:
+    // [oC, s, oM, r, l, i]
+
+        // loop condition
+        dup2 dup2           // [oC, s, oM, r, l, i, l, i]
+        lt iszero           // [oC, s, oM, r, l, i, i >= l]
+        loop_end jumpi
+
+        // compute memory location
+        dup4 dup2           // [oC, s, oM, r, l, i, oM, i]
+        0x20 mul            // [oC, s, oM, r, l, i, oM, i'] (i' := i * 32)
+        add                 // [oC, s, oM, r, l, i, kM]     (kM := oM + i')
+
+        // save one more for shifting later
+        dup1                // [oC, s, oM, r, l, i, kM, kM] 
+
+        // compute code location
+        dup8 dup4 dup9      // [oC, s, oM, r, l, i, kM, kM, oC, i, s]
+        mul                 // [oC, s, oM, r, l, i, kM, kM, oC, i'] (i' := i * s')
+        add                 // [oC, s, oM, r, l, i, kM, kM, kC]     (kC := oC + i')
+
+        // load coefficient to memory
+        dup8 swap2          // [oC, s, oM, r, l, i, kM, s, kC, kM]
+        codecopy            // [oC, s, oM, r, l, i, kM] (mem[kM] := code[kC:kC+s])
+
+        // shift the value
+        dup1 mload          // [oC, s, oM, r, l, i, kM, c]  (c  := mem[kM]) but is 0-rightpadded
+        dup5 shr            // [oC, s, oM, r, l, i, kM, c'] (c' := c >> r)
+        swap1 mstore        // [oC, s, oM, r, l, i]         (mem[kM] := c')
+                
+        // increment index
+        0x01 add            // [oS, s, oM, r, l, i'] (i' := i + 1)
+
+    // [oC, s, oM, r, l, i]
+    loop_begin jump
+    loop_end: 
+
+    pop swap1       // [oC, s, oM, l, r]
+    pop swap2       // [oC, l, oM, s]
+    pop swap2       // [oM, l, oC]
+    pop             // [oM, l]
+
+    // output:         [oM, l] (memOffset, length)
+}
+
+// TODO: sload and sstore a polynomial

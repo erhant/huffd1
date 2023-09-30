@@ -1,0 +1,92 @@
+#define table Basis {
+    0x01050700020c000607
+}
+#define constant TOTAL_SUPPLY = 0x3
+#define constant COEFF_SIZE = 0x1
+#define constant ORDER = 0xd
+
+// evaluate a point at basis
+#define function eval(uint256 basis, uint256 point) view returns (uint256 evaluation)
+// add two basis polynomials and evaluate the point
+#define function addEval(uint256 basis1, uint256 basis2, uint256 point) view returns (uint256 evaluation)
+// scale a basis polynomial and evaluate the point
+#define function scaleEval(uint256 basis, uint256 scale, uint256 point) view returns (uint256 evaluation)
+
+#define macro MAIN() = takes (0) returns (0) {
+    0x00 calldataload 0xE0 shr
+    dup1 __FUNC_SIG(eval)       eq eval         jumpi
+    dup1 __FUNC_SIG(addEval)    eq addEval      jumpi
+    dup1 __FUNC_SIG(scaleEval)  eq scaleEval    jumpi
+    0x00 dup1 revert
+
+    eval:
+        __tablestart(Basis) // [c]          (code offset)
+        0x04 calldataload   // [c, b]       (basis)
+        POLY_OFFSET(COEFF_SIZE, TOTAL_SUPPLY)
+                            // [c, b']      (basis offset) 
+        add                 // [c']         (c' := c + b')
+        [COEFF_SIZE]        // [c, s]       (coefficient size)
+        0x00                // [c, s, m]    (memory offset)
+        [TOTAL_SUPPLY]      // [c, s, m, l] (length)
+        POLY_CODECOPY()     // [m, l]       (mem[m..m+l] := polynomial)
+
+        // evaluate
+        0x24 calldataload   // [m, l, x]    (point to evaluate)
+        POLY_EVAL(ORDER)    // [m, l, e]    (evaluation := P(x))
+
+        0x00 mstore         // [m, l]       (m[0] := e)
+        pop pop             // []
+        0x20 0x00 return    // []
+
+    addEval:
+        __tablestart(Basis) // [c]          (code offset)
+        0x04 calldataload   // [c, b]       (basis)
+        POLY_OFFSET(COEFF_SIZE, TOTAL_SUPPLY) 
+                            // [c, b']      (basis offset)
+        add                 // [c']         (c' := c + b)
+        [COEFF_SIZE]        // [c, s]       (coefficient size)
+        0x00                // [c, s, m]    (memory offset) 
+        [TOTAL_SUPPLY]      // [c, s, m, l] (length)
+        POLY_CODECOPY()     // [m, l]    (mem[m..m+l] := polynomial)
+        pop                 // [m]
+
+        __tablestart(Basis) // [mP, cc]             (code offset)
+        0x24 calldataload   // [mP, cc, bb]         (basis)
+        POLY_OFFSET(COEFF_SIZE, TOTAL_SUPPLY) 
+                            // [mP, cc, bb']        (basis offset)
+        add                 // [mP, cc']            (cc' := cc + bb)
+        [COEFF_SIZE]        // [mP, cc, s]          (coefficient size)
+        0xF0                // [mP, cc, s, mQ]      (memory offset) 
+        [TOTAL_SUPPLY]      // [mP, cc, s, mQ, l]   (length)
+        POLY_CODECOPY()     // [mP, mQ, l]          (mem[m..m+l] := polynomial)
+
+        POLY_ADD(ORDER)     // [m, l]
+
+        0x44 calldataload   // [m, l, x]   (point to evaluate)
+        POLY_EVAL(ORDER)    // [m, l, e]   (evaluation := P(x))
+
+        0x00 mstore         // [m, l]      (m[0] := e)
+        pop pop             // []
+        0x20 0x00 return    // []
+
+    scaleEval:
+        __tablestart(Basis) // [c] (code offset)
+        0x04 calldataload   // [c, b] (basis)
+        POLY_OFFSET(COEFF_SIZE, TOTAL_SUPPLY) 
+                            // [c, b'] (basis offset)
+        add                 // [c'] (c' := c + b')
+        [COEFF_SIZE]        // [c, s] (coefficient size)
+        0x00                // [c, s, m] (memory offset)
+        [TOTAL_SUPPLY]      // [c, s, m, l] (length)
+        POLY_CODECOPY()     // [m, l]
+
+        0x24 calldataload   // [m, l, s] (scale)
+        POLY_SCALE(ORDER)   // [m, l]
+
+        0x44 calldataload   // [m, l, x] (point to evaluate)
+        POLY_EVAL(ORDER)    // [m, l, e] (evaluation)
+
+        0x00 mstore         // [m, l]
+        pop pop             // []
+        0x20 0x00 return    // []
+}

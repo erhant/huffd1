@@ -1,0 +1,71 @@
+/// @title Huffd1
+/// @notice SPDX-License-Identifier: MIT
+/// @author erhant <https://github.com/erhant>
+
+/// Imports
+#include "./util/Owned.huff"
+#include "./util/Polynomial.huff"
+
+/// Interfaces
+#define function name() nonpayable returns (string)
+#define function symbol() nonpayable returns (string)
+
+/// Table
+#define table Basis {
+    0x01050700020c000607
+}
+#define constant TOTAL_SUPPLY = 0x03 // 3: number of terms in a polynomial
+#define constant ORDER = 0x0d // 13: order of the coefficients
+#define constant COEFF_SIZE = 0x01 // 1 byte
+
+/// Storage Slots
+#define constant BAL_SLOT = 0xbabe69babe69babe69babe69babe69 // balances
+
+/// Macros
+#define macro NAME() = takes (0) returns (0) {
+    0x20 0x00 mstore // offset
+    0x06 0x20 mstore // length (12 hex chars, 6 bytes)
+    // encoded string "Huffd1"
+    __RIGHTPAD(0x487566666431) 0x40 mstore
+    0x60 0x00 return
+}
+
+#define macro SYMBOL() = takes (0) returns (0) {
+    0x20 0x00 mstore // offset
+    0x04 0x20 mstore // length (8 hex chars, 4 bytes)
+    // encoded string "FFD1"
+    __RIGHTPAD(0x46464431) 0x40 mstore
+    0x60 0x00 return
+}
+
+/// @dev the constant polynomial equal to OWNER will result
+/// in all tokens being owned by that OWNER.
+#define macro HUFFD1_CONSTRUCTOR() = takes (0) returns (0) {
+    [OWNER]    sload    // [owner]
+    [BAL_SLOT] sstore   // [] ($P[0] := owner)
+}
+
+#define macro HUFFD1_MAIN() = takes (1) returns (0) {
+    dup1 __FUNC_SIG(name)      eq name      jumpi
+    dup1 __FUNC_SIG(symbol)    eq symbol    jumpi
+    no_match jump
+
+    name:
+        NAME()
+    symbol:
+        SYMBOL()
+
+    no_match:
+}
+
+#define macro CONSTRUCTOR() = takes (0) returns (0) {
+    OWNED_CONSTRUCTOR()
+    HUFFD1_CONSTRUCTOR()
+}
+
+#define macro MAIN() = takes (0) returns (0) {
+    0x00 calldataload 0xE0 shr
+    OWNED_MAIN()
+    HUFFD1_MAIN()
+    0x00 0x00 revert
+}
