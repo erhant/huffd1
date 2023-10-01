@@ -12,7 +12,7 @@ contract PolynomialTest is Test {
     bool constant VERBOSE = false;
 
     function setUp() public {
-        string memory code = vm.readFile("test/mocks/PolynomialWrappers.huff");
+        string memory code = vm.readFile("src/test/Polynomial.t.huff");
         polynomial = IPolynomial(HuffDeployer.deploy_with_code("util/Polynomial", code));
     }
 
@@ -56,7 +56,18 @@ contract PolynomialTest is Test {
         }
     }
 
+    // function test_Foo() public {
+    //     uint256 expected = 0xE;
+    //     uint256 actual = 0xA;
+    //     assertEq(actual, expected);
+    // }
+
     function test_AddScaleStore() public {
+        // stored poly is initially constant zero
+        for (uint256 tokenId = 0; tokenId < TOTAL_SUPPLY; ++tokenId) {
+            assertEq(polynomial.evalStore(tokenId), 0);
+        }
+
         uint256 basisToAdd = 0;
         polynomial.addStore(basisToAdd);
 
@@ -66,30 +77,11 @@ contract PolynomialTest is Test {
         for (uint256 basis = 0; basis < TOTAL_SUPPLY; ++basis) {
             VERBOSE ? console.log("") : ();
             for (uint256 tokenId = 0; tokenId < TOTAL_SUPPLY; ++tokenId) {
-                uint256 expected = 0;
-                if (basisToAdd == tokenId) {
-                    expected++;
-                }
-                if (basis == tokenId) {
-                    expected++;
-                }
-                expected = scale * expected;
-                expected = expected % ORDER;
+                uint256 expected = basisToAdd == tokenId ? scale % ORDER : 0;
                 assertEq(polynomial.evalStore(tokenId), expected);
-                // VERBOSE ? console.log("BASIS(0) *", scale, "=", scaledEval) : ();
+                VERBOSE ? console.log(basis, tokenId, expected) : ();
             }
         }
-        console.log("P(0)", polynomial.evalStore(0));
-        console.log("P(1)", polynomial.evalStore(1));
-        console.log("P(2)", polynomial.evalStore(2));
-
-        console.log("P(0) + L1(0)", polynomial.evalStore(0));
-        console.log("P(1) + L1(1)", polynomial.evalStore(1));
-        console.log("P(2) + L1(2)", polynomial.evalStore(2));
-
-        console.log("5(P(0) + L1(0))", polynomial.evalStore(0));
-        console.log("5(P(1) + L1(1))", polynomial.evalStore(1));
-        console.log("5(P(2) + L1(2))", polynomial.evalStore(2));
     }
 }
 

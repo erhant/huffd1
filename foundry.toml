@@ -13,5 +13,5 @@ remappings = [
 ]
 
 fs_permissions = [
-    { access = "read", path = "./test/mocks/PolynomialWrappers.huff" }
+    { access = "read", path = "./src/test/Polynomial.t.huff" }
 ]

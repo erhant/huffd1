@@ -22,7 +22,7 @@ Initially, all tokens are owned by the contract deployer, which can be represent
 
 ### `balanceOf`
 
-To find the balance of an address, iterate over all tokens and call `ownerOf`, counting the number of matches along the way.
+To find the balance of an address, iterate over all tokens and call `ownerOf`, counting the number of matching addresses along the way.
 
 ### `transfer`
 

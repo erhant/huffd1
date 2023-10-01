@@ -5,8 +5,6 @@
 #define constant COEFF_SIZE = 0x1
 #define constant ORDER = 0xd
 
-#define constant P_SLOT = 0xbabedeadcafe
-
 // evaluate a point at basis
 #define function eval(uint256 basis, uint256 point) view returns (uint256 evaluation)
 // add two basis polynomials and evaluate the point
@@ -20,6 +18,9 @@
 #define function addStore(uint256 basis) view returns ()
 // scale the stored polynomial
 #define function scaleStore(uint256 scale) view returns ()
+
+// polynomial offset for P
+#define constant P_SLOT = 0xbabedeadcafe
 
 #define macro MAIN() = takes (0) returns (0) {
     0x00 calldataload 0xE0 shr
