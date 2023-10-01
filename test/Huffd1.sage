@@ -104,7 +104,6 @@ class HUFFD1:
         code = code + "\n#define constant TOTAL_SUPPLY = " + hex(self.total_supply)
         code = code + "\n#define constant COEFF_SIZE = " + hex(self.coeff_size)
         code = code + "\n#define constant ORDER = " + hex(self.order)
-        code = code + "\n"
         path = "./src/data/Basis" + str(self.total_supply) + ".huff"
         with open(path, "w") as _file:
             _file.write(code)
@@ -136,7 +135,10 @@ if __name__ == "__main__":
     # print(huffd1.bs[0])
 
     # test transfer
-    # TODO
+    NEW_OWNER = 0x9
+    assert huffd1.ownerOf(0) == OWNER
+    huffd1.transferFrom(OWNER, NEW_OWNER, 0)
+    assert huffd1.ownerOf(0) == NEW_OWNER
 
     # export table for Huff
     huffd1.export_basis_table()

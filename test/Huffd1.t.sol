@@ -37,6 +37,27 @@ contract Huffd1Test is Test {
         assertEq(OWNER, huffd1.ownerOf(0));
         assertEq(OWNER, huffd1.ownerOf(1));
     }
+
+    /// @dev Should transfer correctly.
+    function test_Transfer() public {
+        assertEq(OWNER, huffd1.ownerOf(0));
+
+        address NEW_OWNER = address(0x9);
+        vm.prank(OWNER);
+        huffd1.transfer(NEW_OWNER, 0);
+        assertEq(huffd1.ownerOf(0), NEW_OWNER);
+    }
+
+    /// @dev Should fail to transfer a not-owned token.
+    function testFail_Transfer() public {
+        vm.prank(address(0x5)); // not an owner
+        huffd1.transfer(OWNER, 0);
+    }
+
+    /// @dev Should give corect balance.
+    function test_BalanceOf() public {
+        assertEq(TOTAL_SUPPLY, huffd1.balanceOf(OWNER));
+    }
 }
 
 // util/Owned.huff

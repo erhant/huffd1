@@ -68,7 +68,7 @@
                             // [mP, cc, bb']        (basis offset)
         add                 // [mP, cc']            (cc' := cc + bb)
         [COEFF_SIZE]        // [mP, cc, s]          (coefficient size)
-        0xF0                // [mP, cc, s, mQ]      (memory offset) 
+        0xFFFF              // [mP, cc, s, mQ]      (memory offset) 
         [TOTAL_SUPPLY]      // [mP, cc, s, mQ, l]   (length)
         POLY_CODECOPY()     // [mP, mQ, l]          (mem[m..m+l] := polynomial)
 

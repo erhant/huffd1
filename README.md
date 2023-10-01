@@ -8,6 +8,7 @@ The concept works for any order actually, but we would like to use an order that
 
 - have polynomial for approvals too?
 - maybe use FFI to generate the basis based on total supply via script?
+- bug with memory offsets somehow?
 
 ## Usage
 
