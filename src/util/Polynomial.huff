@@ -71,13 +71,13 @@
 /// takes:   [offset_P, offset_Q, length]
 /// returns: [offset, length]
 #define macro POLY_ADD(order) = takes (3) returns (2) {
-    // input: [oP, oQ, l] (offset_P, offset_Q, length)
+    // input:      [oP, oQ, l] (offset_P, offset_Q, length)
 
     // multiply len by 32 since we will go over the memory word-by-word
     0x20 mul    // [oP, oQ, l'] (l' = l * 32)
 
     // begin loop, starting from i := 0
-    0x00     // [oP, oQ, l, i] (index)
+    0x00        // [oP, oQ, l, i] (index)
     loop_begin:
     // [oP, oQ, l, i]
 
@@ -101,10 +101,11 @@
 
         // add
         <order> swap2   // [oP, oQ, l, i, kP, p, cP, cQ]
-        addmod          // [oP, oQ, l, i, kP, c']       (c' := (c + v) % p)
+        addmod          // [oP, oQ, l, i, kP, c']       (c' := (cP + cQ) % p)
 
         // load back result into memory (at P's offset)
-        swap1 mstore    // [oP, oQ, l, i]
+        swap1           // [oP, oQ, l, i, c, kP] 
+        mstore          // [oP, oQ, l, i]
 
         // increment index one word
         0x20 add        // [oP, oQ, l, i']              (i' = i' + 32)
@@ -113,8 +114,12 @@
     loop_begin jump
     loop_end:
 
-    pop swap1 pop // [oP, l]
+    pop swap1 pop       // [oP, l]
 
+    // div length by 32 to go back to normal indexing
+    // which is equal to shifting to right 5 times
+    0x05 shr            // [oP, l'] (l' = l >> 5 = l / 32)
+    
     // output:       [oP, l]
 }
 
@@ -133,7 +138,8 @@
 
     // multiply len by 32 since we will go over the memory word-by-word
     swap1 0x20  // [o, x, l, 32]
-    mul swap1   // [o, l', x] (l' = l * 32)
+    mul         // [o, x, l'] (l' = l * 32)
+    swap1       // [o, l, x]
 
     // sum accumulator starts at 0
     0x00        // [o, l, x, s] (s := 0)
@@ -141,6 +147,7 @@
     // index shall be (length - 1) * 32 = l - 32
     0x20 dup4   // [o, l, x, s, 32, l]
     sub         // [o, l, x, s, i] (i := l - 32)
+
     loop_begin:
     // [o, l, x, s, i]
 
@@ -156,27 +163,35 @@
         add             // [o, l, x, s, i, k]           (k := o+i)
 
         // mulmod accumulator with x
-        <order> dup4    // [o, l, x, s, i, k, p, s]     (p := order)
-        dup6 mulmod     // [o, l, x, s, i, k, ss]       (ss := (s * x) % p)
+        <order>         // [o, l, x, s, i, k, p]        (p := order)
+        dup4            // [o, l, x, s, i, k, p, s]
+        dup6            // [o, l, x, s, i, k, p, s, x]
+        mulmod          // [o, l, x, s, i, k, ss]       (ss := (s * x) % p)
 
         // addmod accumulator with coefficient
-        <order> swap2   // [o, l, x, s, i, p, ss, k]    (p : order)
+        <order>         // [o, l, x, s, i, k, ss, p]    (p : order)
+        swap2           // [o, l, x, s, i, p, ss, k]
         mload           // [o, l, x, s, i, p, ss, c]    (c := mem[k])
         addmod          // [o, l, x, s, i, ss']         (ss' := (ss + c) % p)
 
         // update accumulator
-        swap2 pop       // [o, l, x, s', i]             (s' := ss')
+        swap2           // [o, l, x, ss', i, s]
+        pop             // [o, l, x, s',  i]             (s' := ss')
 
         // decrement index one word
-        0x20 swap1 sub  // [o, l, x, s, i']             (i' := i - 32)
+        0x20            // [o, l, x, s, i, 32]
+        swap1           // [o, l, x, s, 32, i]
+        sub             // [o, l, x, s, i']             (i' := i - 32)
 
     // [o, l, x, s, i]
     loop_begin jump
-    loop_end: 
+    loop_end:
 
-    pop swap1 pop // [o, l, s]
+    pop                 // [o, l, x, s]
+    swap1               // [o, l, s, x]
+    pop                 // [o, l, s]
 
-    // output:       [o, l, s] (offset, length, evaluation)
+    // output:             [o, l, s] (offset, length, evaluation)
 }
 
 
@@ -186,7 +201,7 @@
 ///
 /// args: size of coefficients, and the number of basis polynomials
 ///
-/// takes:   [basis id]
+/// takes:   [basisId]
 /// returns: [offset]
 #define macro POLY_OFFSET(size, count) = takes (1) returns (1) {
     // input:      [b]   (basis id)

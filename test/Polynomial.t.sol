@@ -21,7 +21,8 @@ contract PolynomialTest is Test {
             VERBOSE ? console.log("") : ();
             for (uint256 tokenId = 0; tokenId < TOTAL_SUPPLY; ++tokenId) {
                 uint256 eval = polynomial.eval(basis, tokenId);
-                assertEq(eval, basis == tokenId ? 1 : 0);
+                uint256 expected = basis == tokenId ? 1 : 0;
+                assertEq(eval, expected);
                 VERBOSE ? console.log("BASIS(", basis, "):", eval) : ();
             }
         }
@@ -33,11 +34,15 @@ contract PolynomialTest is Test {
                 for (uint256 tokenId = 0; tokenId < TOTAL_SUPPLY; ++tokenId) {
                     uint256 eval1 = polynomial.eval(basis1, tokenId);
                     uint256 eval2 = polynomial.eval(basis2, tokenId);
+                    uint256 expected = (eval1 + eval2) % ORDER;
+
                     uint256 addEval = polynomial.addEval(basis1, basis2, tokenId);
                     // console.log("BASIS1:", basis1, "\tBASIS2:", basis2);
-                    // console.log("EVAL1:", eval1, "\tEVAL2:", eval2);
-                    // console.log("TOKEN:", tokenId, "\tADD:", addEval);
-                    assertEq((eval1 + eval2) % ORDER, addEval);
+                    console.log("EVAL1:", eval1, "\tEVAL2:", eval2);
+                    // console.log("EXPECTED:", tokenId, "\tADDEVAL:", addEval);
+                    // console.log("");
+                    console.log("BASIS1 BASIS2 TOKEN:", basis1, basis2, tokenId);
+                    assertEq(addEval, expected);
                 }
             }
         }
@@ -50,17 +55,12 @@ contract PolynomialTest is Test {
             for (uint256 tokenId = 0; tokenId < TOTAL_SUPPLY; ++tokenId) {
                 uint256 eval = polynomial.eval(basis, tokenId);
                 uint256 scaledEval = polynomial.scaleEval(basis, scale, tokenId);
-                assertEq(scaledEval, basis == tokenId ? (eval * scale) % ORDER : 0);
+                uint256 expected = basis == tokenId ? (eval * scale) % ORDER : 0;
+                assertEq(scaledEval, expected);
                 VERBOSE ? console.log("BASIS(0) *", scale, "=", scaledEval) : ();
             }
         }
     }
-
-    // function test_Foo() public {
-    //     uint256 expected = 0xE;
-    //     uint256 actual = 0xA;
-    //     assertEq(actual, expected);
-    // }
 
     function test_AddScaleStore() public {
         // stored poly is initially constant zero
@@ -74,6 +74,7 @@ contract PolynomialTest is Test {
         uint256 scale = 4;
         polynomial.scaleStore(scale);
 
+        // now it should be equal to `scale` at the basis that's been added
         for (uint256 basis = 0; basis < TOTAL_SUPPLY; ++basis) {
             VERBOSE ? console.log("") : ();
             for (uint256 tokenId = 0; tokenId < TOTAL_SUPPLY; ++tokenId) {
@@ -87,14 +88,16 @@ contract PolynomialTest is Test {
 
 interface IPolynomial {
     function eval(uint256 basis, uint256 point) external view returns (uint256 evaluation);
-
     function addEval(uint256 basis1, uint256 basis2, uint256 point) external view returns (uint256 evaluation);
-
     function scaleEval(uint256 basis, uint256 scale, uint256 point) external view returns (uint256 evaluation);
 
     function evalStore(uint256 point) external view returns (uint256 evaluation);
-
     function addStore(uint256 basis) external;
-
     function scaleStore(uint256 scale) external;
 }
+
+// function test_Foo() public {
+//     uint256 expected = 0xE;
+//     uint256 actual = 0xA;
+//     assertEq(actual, expected);
+// }

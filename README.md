@@ -1,18 +1,59 @@
 # `huffd1`
 
-`huffd1` is a non-fungible token implementation in Huff, where the ownership of a token is given by the evaluation of a polynomial $P(x)$, defined over the finite field of prime order $p = 2^{160} - 47$, equal to `0xffffffffffffffffffffffffffffffffffffffd1` (hence the name), the largest 160-bit prime. Note that we could also use $p = 2^{160} + 7$, but I wanted all coefficients to be strictly 160-bits, which is not the case with that prime.
+`huffd1` is a non-fungible token implementation in Huff, where the ownership of a token is given by the evaluation of a polynomial $P(x)$, defined over the finite field of prime order $p = 2^{160} - 47$, the largest 160-bit prime:
 
-The concept works for any order actually, but we would like to use an order that can fit almost all the addresses.
+$$
+p = \mathtt{0xffffffffffffffffffffffffffffffffffffffd1}
+$$
 
-## TODO
+Notice the final hexadecimals, which is where the name of the project comes from.
 
-- have polynomial for approvals too?
-- maybe use FFI to generate the basis based on total supply via script?
-- bug with memory offsets somehow?
+We could also use $p = 2^{160} + 7$, but I wanted all coefficients to be strictly 160-bits, which is not the case with that prime. In fact, the concept works for any order, but we would like to use an order that can fit almost all the addresses while being as large as an address.
+
+The degree of the polynomial is equal to total supply - 1, so for $n$ tokens we have a polynomial $P$:
+
+$$
+P \in \mathbb{F}_\mathtt{0xffffffffffffffffffffffffffffffffffffffd1}^{n-1}[X]
+$$
+
+> <picture>
+>   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/light-theme/warning.svg">
+>   <img alt="Warning" src="https://raw.githubusercontent.com/Mqxx/GitHub-Markdown/main/blockquotes/badge/dark-theme/warning.svg">
+> </picture><br>
+>
+> The stack comments are written in reverse order:
+>
+> ```c
+> opcode // [top-N, ..., top-1, top]
+> pop    // [top-N, ..., top-1]
+> 0x01   // [top-N, ..., top-1, 0x01]
+> ```
+>
+> Be careful not to be confused!
 
 ## Usage
 
-Let's describe each function:
+We have a Sage script that can export the basis polynomials as a codetable.
+
+```c
+// basis polynomials coefficients
+#define table Basis {
+  // 0x...
+}
+
+// number of tokens
+#define constant TOTAL_SUPPLY = 0xa
+
+// number of bytes per coefficient
+#define constant COEFF_SIZE = 0x14
+
+// order of the finite field
+#define constant ORDER = 0xffffffffffffffffffffffffffffffffffffffd1
+```
+
+Using these, we can load polynomials from the code table, and work with them using [`Polynomial.huff`](./src/util/Polynomial.huff).
+
+Let's describe each function of [`huffd1`](./src/Huffd1.huff):
 
 ### `ownerOf`
 
@@ -31,3 +72,13 @@ To transfer a token $t$ from address $a \to b$, update $P(x)$ to be $P(x) + L_t(
 This operation results in multiplying the coefficients of $L_t(x)$ with $(b - a)$ which we will do via `MULMOD`, and afterwards summation of the coefficients of $P(x)$ and the resulting polynomial from previous step, using `ADDMOD`.
 
 Also note that $-a$ is obtained by $p-a$ where $p$ is the order of the finite field.
+
+## Testing
+
+Simply do:
+
+```sh
+forge test
+```
+
+It shall test both the polynomial utilities and the `huffd1` contract.

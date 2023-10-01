@@ -15,9 +15,9 @@
 // evaluate a point at stored polynomial
 #define function evalStore(uint256 point) view returns (uint256 evaluation)
 // add a basis polynomial to stored polynomial
-#define function addStore(uint256 basis) view returns ()
+#define function addStore(uint256 basis) nonpayable returns ()
 // scale the stored polynomial
-#define function scaleStore(uint256 scale) view returns ()
+#define function scaleStore(uint256 scale) nonpayable returns ()
 
 // polynomial offset for P
 #define constant P_SLOT = 0xbabedeadcafe
@@ -69,9 +69,12 @@
                             // [mP, cc, bb']        (basis offset)
         add                 // [mP, cc']            (cc' := cc + bb)
         [COEFF_SIZE]        // [mP, cc, s]          (coefficient size)
-        0xFFFF              // [mP, cc, s, mQ]      (memory offset) 
+        dup3                // [mP, cc, s, mP]      
+        [TOTAL_SUPPLY]      // [mP, cc, s, mP, l]
+        0x20 mul            // [mP, cc, s, mP, l']  (length * 32)
+        add                 // [mP, cc, s, mQ]      (mQ = mP + l')
         [TOTAL_SUPPLY]      // [mP, cc, s, mQ, l]   (length)
-        POLY_CODECOPY()     // [mP, mQ, l]          (mem[m..m+l] := polynomial)
+        POLY_CODECOPY()     // [mP, mQ, l]          (mem[mQ..mQ+l] := polynomial)
 
         POLY_ADD(ORDER)     // [m, l]
 
@@ -128,7 +131,11 @@
         pop                 // [m]
 
         [P_SLOT]            // [mP, sQ] (storage offset)
-        0xF0                // [mP. sQ, mQ] (memory offset)
+        dup2                // [mP. sQ, mP]
+        [TOTAL_SUPPLY]      // [mP. sQ, mP, l, 32]
+        0x20 mul            // [mP. sQ, mP, l'] (l' := l * 32)
+        add                 // [mP. sQ, mQ] (mQ := mP + l')
+        // [mP. sQ, mQ] (memory offset)
         [TOTAL_SUPPLY]      // [mP, sQ, mQ, l] (length)
         POLY_SLOAD()        // [mP, mQ, l]
         

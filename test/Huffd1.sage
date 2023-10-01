@@ -116,9 +116,9 @@ class HUFFD1:
 # ORDER = 0xffffffffffffffffffffffffffffffffffffffd1 # largest 160-bit prime
 
 if __name__ == "__main__":
-    TOTAL_SUPPLY = 3  # degree of polynomial + 1
-    COEFF_SIZE = 1  # bytes
-    ORDER = 13  # order of finite field for coefficients
+    TOTAL_SUPPLY = 10  # degree of polynomial + 1
+    COEFF_SIZE = 20  # bytes
+    ORDER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD1  # order of finite field for coefficients
 
     OWNER = 0x1
     assert OWNER < ORDER  # order must be larger than the owner (address)
