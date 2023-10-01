@@ -2,26 +2,35 @@
 /// @notice SPDX-License-Identifier: MIT
 /// @author erhant <https://github.com/erhant>
 
-/// Imports
+///////////////////////////////////////////////////////////////////////////////
+////                              INCLUDES                                 ////
+///////////////////////////////////////////////////////////////////////////////
 #include "./util/Owned.huff"
 #include "./util/Polynomial.huff"
 
-/// Interfaces
+///////////////////////////////////////////////////////////////////////////////
+////                             INTERFACES                                ////
+///////////////////////////////////////////////////////////////////////////////
 #define function name() nonpayable returns (string)
 #define function symbol() nonpayable returns (string)
+#define function ownerOf(uint256) view returns (address)
 
 /// Table
 #define table Basis {
     0x01050700020c000607
 }
-#define constant TOTAL_SUPPLY = 0x03 // 3: number of terms in a polynomial
-#define constant ORDER = 0x0d // 13: order of the coefficients
-#define constant COEFF_SIZE = 0x01 // 1 byte
+#define constant TOTAL_SUPPLY = 0x03
+#define constant ORDER = 0x0d
+#define constant COEFF_SIZE = 0x01
 
-/// Storage Slots
+///////////////////////////////////////////////////////////////////////////////
+////                               STORAGE                                 ////
+///////////////////////////////////////////////////////////////////////////////
 #define constant BAL_SLOT = 0xbabe69babe69babe69babe69babe69 // balances
 
-/// Macros
+///////////////////////////////////////////////////////////////////////////////
+////                                MACROS                                 ////
+///////////////////////////////////////////////////////////////////////////////
 #define macro NAME() = takes (0) returns (0) {
     0x20 0x00 mstore // offset
     0x06 0x20 mstore // length (12 hex chars, 6 bytes)
@@ -38,26 +47,51 @@
     0x60 0x00 return
 }
 
-/// @dev the constant polynomial equal to OWNER will result
-/// in all tokens being owned by that OWNER.
+#define macro OWNER_OF() = takes (1) returns (1) {
+    // input:              [t] (tokenId)
+    [BAL_SLOT]          // [t, s] (storageSlot)
+    0x00                // [t, s, m] (memoryOffset)
+    [TOTAL_SUPPLY]      // [t, s, m, l] (length)
+    POLY_SLOAD()        // [t, m, l]
+    dup3                // [t, m, l, t] (token id)
+    POLY_EVAL(ORDER)    // [t, m, l, a] (address)
+    swap3               // [a, m, l, t]
+    pop pop pop         // [a]
+    // output:             [a] (owner)
+}
+
+///////////////////////////////////////////////////////////////////////////////
+////                               MAIN                                    ////
+///////////////////////////////////////////////////////////////////////////////
 #define macro HUFFD1_CONSTRUCTOR() = takes (0) returns (0) {
+    // the constant polynomial equal to OWNER will result
+    // in all tokens being owned by that OWNER
     [OWNER]    sload    // [owner]
-    [BAL_SLOT] sstore   // [] ($P[0] := owner)
+    [BAL_SLOT] sstore   // []
 }
 
 #define macro HUFFD1_MAIN() = takes (1) returns (0) {
     dup1 __FUNC_SIG(name)      eq name      jumpi
     dup1 __FUNC_SIG(symbol)    eq symbol    jumpi
+    dup1 __FUNC_SIG(ownerOf)   eq ownerOf   jumpi
     no_match jump
 
     name:
         NAME()
     symbol:
         SYMBOL()
+    ownerOf:
+        0x04 calldataload   // [t] (tokenId)
+        OWNER_OF()          // [a] (address)
+        0x00 mstore         // []
+        0x20 0x00 return    // []
 
     no_match:
 }
 
+///////////////////////////////////////////////////////////////////////////////
+////                              WRAPPERS                                 ////
+///////////////////////////////////////////////////////////////////////////////
 #define macro CONSTRUCTOR() = takes (0) returns (0) {
     OWNED_CONSTRUCTOR()
     HUFFD1_CONSTRUCTOR()

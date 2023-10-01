@@ -5,6 +5,8 @@
 #define constant COEFF_SIZE = 0x1
 #define constant ORDER = 0xd
 
+#define constant P_SLOT = 0xbabedeadcafe
+
 // evaluate a point at basis
 #define function eval(uint256 basis, uint256 point) view returns (uint256 evaluation)
 // add two basis polynomials and evaluate the point
@@ -12,11 +14,21 @@
 // scale a basis polynomial and evaluate the point
 #define function scaleEval(uint256 basis, uint256 scale, uint256 point) view returns (uint256 evaluation)
 
+// evaluate a point at stored polynomial
+#define function evalStore(uint256 point) view returns (uint256 evaluation)
+// add a basis polynomial to stored polynomial
+#define function addStore(uint256 basis) view returns ()
+// scale the stored polynomial
+#define function scaleStore(uint256 scale) view returns ()
+
 #define macro MAIN() = takes (0) returns (0) {
     0x00 calldataload 0xE0 shr
     dup1 __FUNC_SIG(eval)       eq eval         jumpi
     dup1 __FUNC_SIG(addEval)    eq addEval      jumpi
     dup1 __FUNC_SIG(scaleEval)  eq scaleEval    jumpi
+    dup1 __FUNC_SIG(evalStore)  eq evalStore    jumpi
+    dup1 __FUNC_SIG(addStore)   eq addStore     jumpi
+    dup1 __FUNC_SIG(scaleStore) eq scaleStore   jumpi
     0x00 dup1 revert
 
     eval:
@@ -89,4 +101,56 @@
         0x00 mstore         // [m, l]
         pop pop             // []
         0x20 0x00 return    // []
+
+    evalStore:
+        [P_SLOT]            // [c] (code offset)
+        0x00                // [c, m] (memory offset)
+        [TOTAL_SUPPLY]      // [c, m, l] (length)
+        POLY_SLOAD()        // [m, l]
+
+        0x04 calldataload   // [m, l, x] (point to evaluate)
+        POLY_EVAL(ORDER)    // [m, l, e] (evaluation)
+
+        0x00 mstore pop pop // []
+        0x20 0x00 return    // []
+
+    addStore:
+        __tablestart(Basis) // [c] (code offset)
+        0x04 calldataload   // [c, b] (basis)
+        POLY_OFFSET(COEFF_SIZE, TOTAL_SUPPLY)
+                            // [c, b'] (basis offset)
+        add                 // [c'] (c' := c + b')
+        [COEFF_SIZE]        // [c, s] (coefficient size)
+        0x00                // [c, s, m] (memory offset)
+        [TOTAL_SUPPLY]      // [c, s, m, l] (length)
+        POLY_CODECOPY()     // [m, l]
+        pop                 // [m]
+
+        [P_SLOT]            // [mP, sQ] (storage offset)
+        0xF0                // [mP. sQ, mQ] (memory offset)
+        [TOTAL_SUPPLY]      // [mP, sQ, mQ, l] (length)
+        POLY_SLOAD()        // [mP, mQ, l]
+        
+        POLY_ADD(ORDER)     // [mP, l]
+
+        [P_SLOT] swap1      // [mP, sP, l]
+        POLY_SSTORE()       // [sP, l] 
+
+        pop pop             // []
+        0x00 0x00 return    // []
+
+    scaleStore:
+        [P_SLOT]            // [sP] (storage offset)
+        0xF0                // [sP, mP] (memory offset)
+        [TOTAL_SUPPLY]      // [sP, mP, l] (length)
+        POLY_SLOAD()        // [mP, l]
+        
+        0x04 calldataload   // [mP, l, s] (scale)
+        POLY_SCALE(ORDER)   // [mP, l]
+
+        [P_SLOT] swap1      // [mP, sP, l]
+        POLY_SSTORE()       // [sP, l]
+
+        pop pop             // []
+        0x00 0x00 return    // []
 }

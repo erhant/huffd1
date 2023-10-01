@@ -260,4 +260,104 @@
     // output:         [oM, l] (memOffset, length)
 }
 
-// TODO: sload and sstore a polynomial
+/// @dev load coefficients from storage to memory.
+///
+/// expects `length` many words stored in storage, starting from slot `storageOffset`.
+///
+/// there will be `length` many words stored in memory following `memOffset`.
+///
+/// takes:   [storageOffset, memOffset, length]
+/// returns: [memOffset, length]
+#define macro POLY_SLOAD() = takes (3) returns (2) {
+    // input:   [oS, oM, l]
+
+    // index starts with 0
+    0x00        // [oS, oM, l, i] (i := 0)
+    loop_begin:
+    // [oS, oM, l, i]
+
+        // loop condition
+        dup2 dup2           // [oS, oM, l, i, l, i]
+        lt iszero           // [oS, oM, l, i, i >= l]
+        loop_end jumpi
+        
+        // find storage location
+        dup4 dup2           // [oS, oM, l, i, oS, i]
+        add                 // [oS, oM, l, i, k] (k := oS + i)
+
+        // load coefficient from storage
+        sload               // [oS, oM, l, i, c] (c := $[k])
+
+        // find memory location
+        dup4 dup3           // [oS, oM, l, i, c, oM, i]
+        0x20 mul            // [oS, oM, l, i, c, oM, i'] (i' := i * 32)
+        add                 // [oS, oM, l, i, c, k] (k := oM + i')
+
+        // store coefficient to memory
+        mstore              // [oS, oM, l, i] (mem[k] := c)
+
+        // increment index
+        0x01 add            // [oS, oM, l, i'] (i' := i + 1)
+
+    // [oS, oM, l, i]
+    loop_begin jump
+    loop_end:
+    
+    pop     // [oS, oM, l]
+    swap1   // [oS, l, oM]
+    swap2   // [oM, l, oS]
+    pop     // [oM, l]
+
+    // output: [oM, l] (memOffset, length)
+}
+
+/// @dev store coefficients in memory to storage.
+///
+/// expects `length` many words stored in memory, following `memOffset`.
+///
+/// there will be `length` many words stored in storage following slot `storageOffset`.
+///
+/// takes:   [memOffset, storageOffset, length]
+/// returns: [storageOffset, length]
+#define macro POLY_SSTORE() = takes (3) returns (2) {
+    // input:   [oM, oS, l]
+
+    // index starts with 0
+    0x00        // [oM, oS, l, i] (i := 0)
+    loop_begin:
+    // [oM, oS, l, i]
+
+        // loop condition
+        dup2 dup2           // [oM, oS, l, i, l, i]
+        lt iszero           // [oM, oS, l, i, i >= l]
+        loop_end jumpi
+        
+        // find memory location
+        dup4 dup2           // [oM, oS, l, i, oM, i]
+        0x20 mul            // [oM, oS, l, i, oM, i'] (i' := i * 32)
+        add                 // [oM, oS, l, i, k] (k := oM + i')
+
+        // load coefficient from memory
+        mload               // [oM, oS, l, i, c] (c := mem[k])
+
+        // find storage location
+        dup4 dup3           // [oM, oS, l, i, c, oS, i]
+        add                 // [oM, oS, l, i, c, k] (k := oS + i')
+
+        // store coefficient to storage
+        sstore              // [oM, oS, l, i] ($[k] := c)
+
+        // increment index
+        0x01 add            // [oM, oS, l, i'] (i' := i + 1)
+
+    // [oM, oS, l, i]
+    loop_begin jump
+    loop_end:
+    
+    pop     // [oM, oS, l, i]
+    swap1   // [oM, l, oS]
+    swap2   // [oS, l, oM]
+    pop     // [oS, l]
+
+    // output: [oS, l] (storageOffset, length)
+}
