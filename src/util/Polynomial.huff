@@ -59,6 +59,9 @@
 
     pop swap1 pop   // [o, l]
 
+    // revert changes to length
+    0x05 shr        // [o, l'] (l' := l >> 5 = l / 32)
+
     // output:         [o, l]
 }
 
@@ -74,7 +77,7 @@
     // input:      [oP, oQ, l] (offset_P, offset_Q, length)
 
     // multiply len by 32 since we will go over the memory word-by-word
-    0x20 mul    // [oP, oQ, l'] (l' = l * 32)
+    0x05 shl    // [oP, oQ, l'] (l' = l << 5 = l * 32)
 
     // begin loop, starting from i := 0
     0x00        // [oP, oQ, l, i] (index)
@@ -119,8 +122,8 @@
     // div length by 32 to go back to normal indexing
     // which is equal to shifting to right 5 times
     0x05 shr            // [oP, l'] (l' = l >> 5 = l / 32)
-    
-    // output:       [oP, l]
+
+    // output:             [oP, l]
 }
 
 /// @dev evaluate the polynomial at some point `x`
@@ -137,15 +140,16 @@
     // input:      [o, l, x] (offset, length, x)
 
     // multiply len by 32 since we will go over the memory word-by-word
-    swap1 0x20  // [o, x, l, 32]
-    mul         // [o, x, l'] (l' = l * 32)
+    swap1       // [o, x, l]
+    0x05 shl    // [o, x, l'] (l' = l << 5 = l * 32)
     swap1       // [o, l, x]
 
     // sum accumulator starts at 0
     0x00        // [o, l, x, s] (s := 0)
 
     // index shall be (length - 1) * 32 = l - 32
-    0x20 dup4   // [o, l, x, s, 32, l]
+    0x20        // [o, l, x, s, 32]
+    dup4        // [o, l, x, s, 32, l]
     sub         // [o, l, x, s, i] (i := l - 32)
 
     loop_begin:
@@ -186,10 +190,15 @@
     // [o, l, x, s, i]
     loop_begin jump
     loop_end:
-
+                        // [o, l, x, s, i]
     pop                 // [o, l, x, s]
     swap1               // [o, l, s, x]
     pop                 // [o, l, s]
+
+    // divide length by 32 to revert the change at the start
+    swap1               // [o, s, l]
+    0x05 shr            // [o, s, l'] (l' = l >> 5 = l / 32)
+    swap1               // [o, l, s]
 
     // output:             [o, l, s] (offset, length, evaluation)
 }

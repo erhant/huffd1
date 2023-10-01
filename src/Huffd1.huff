@@ -123,7 +123,7 @@
     swap1               // [a, m, s, l] 
     0x00                // [a, m, s, l, i] (index starts with 0)
 
-    // loop_begin:
+    loop_begin:
     // [a, m, s, l, i]
 
         // loop condition
@@ -145,13 +145,13 @@
         dup6            // [a, m, s, l, i, m, l, eq, s]
         add             // [a, m, s, l, i, m, l, s'] (s' := s + eq)
         swap5           // [a, m, s',l, i, m, l, s] 
-        pop pop          // [a, m, s, l, i]
+        pop pop pop     // [a, m, s, l, i]
 
         // increment index
         0x01 add        // [a, m, s',l, i'] (i' := i + 1)
 
     // [a, m, s, l, i]
-    // loop_begin jump
+    loop_begin jump
     loop_end:
 
     pop                 // [a, m, s, l]

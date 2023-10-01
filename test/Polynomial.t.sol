@@ -38,10 +38,10 @@ contract PolynomialTest is Test {
 
                     uint256 addEval = polynomial.addEval(basis1, basis2, tokenId);
                     // console.log("BASIS1:", basis1, "\tBASIS2:", basis2);
-                    console.log("EVAL1:", eval1, "\tEVAL2:", eval2);
+                    // console.log("EVAL1:", eval1, "\tEVAL2:", eval2);
                     // console.log("EXPECTED:", tokenId, "\tADDEVAL:", addEval);
+                    // console.log("BASIS1 BASIS2 TOKEN:", basis1, basis2, tokenId);
                     // console.log("");
-                    console.log("BASIS1 BASIS2 TOKEN:", basis1, basis2, tokenId);
                     assertEq(addEval, expected);
                 }
             }
