@@ -6,11 +6,7 @@ $$
 p = \mathtt{0xffffffffffffffffffffffffffffffffffffffd1}
 $$
 
-Notice the final hexadecimals, which is where the name of the project comes from.
-
-We could also use $p = 2^{160} + 7$, but I wanted all coefficients to be strictly 160-bits, which is not the case with that prime. In fact, the concept works for any order, but we would like to use an order that can fit almost all the addresses while being as large as an address.
-
-The degree of the polynomial is equal to total supply - 1, so for $n$ tokens we have a polynomial $P$:
+Notice the final hexadecimals, which is where the name of the project comes from. The degree of the polynomial is equal to total supply - 1, so for $n$ tokens we have a polynomial $P$:
 
 $$
 P \in \mathbb{F}_\mathtt{0xffffffffffffffffffffffffffffffffffffffd1}^{n-1}[X]
@@ -28,12 +24,10 @@ $$
 > pop    // [top-N, ..., top-1]
 > 0x01   // [top-N, ..., top-1, 0x01]
 > ```
->
-> Be careful not to be confused!
 
 ## Usage
 
-We have a Sage script that can export the basis polynomials as a codetable.
+We have a Sage script that can export the basis polynomials, one for each token id, as a codetable where the coefficients of each polynomial are concatenated.
 
 ```c
 // basis polynomials coefficients
@@ -51,13 +45,13 @@ We have a Sage script that can export the basis polynomials as a codetable.
 #define constant ORDER = 0xffffffffffffffffffffffffffffffffffffffd1
 ```
 
-Using these, we can load polynomials from the code table, and work with them using [`Polynomial.huff`](./src/util/Polynomial.huff).
+Using these, we can load polynomials from the code table, and work with them using [`Polynomial.huff`](./src/util/Polynomial.huff). Note that this codetable grows pretty large for 20-byte coefficient size, and may easily get past the 24KB maximum contract size.
 
 Let's describe each function of [`huffd1`](./src/Huffd1.huff):
 
 ### `ownerOf`
 
-To find the owner of a token $t$, simply evaluate $P(t)$ and the result will be a 160-bit number corresponding to the owner address. We use Horner's method to efficiently evaluate our polynomial.
+To find the owner of a token $t$, simply evaluate $P(t)$ and the result will be a 160-bit number corresponding to the owner address. We use [Horner's method](https://zcash.github.io/halo2/background/polynomials.html#aside-horners-rule) to efficiently evaluate our polynomial.
 
 Initially, all tokens are owned by the contract deployer, which can be represented by the constant polynomial that is equal to the owner address.
 
@@ -73,6 +67,14 @@ This operation results in multiplying the coefficients of $L_t(x)$ with $(b - a)
 
 Also note that $-a$ is obtained by $p-a$ where $p$ is the order of the finite field.
 
+#### `name`
+
+Returns the string `"Huffd1"`.
+
+### `symbol`
+
+Returns the string `"FFD1"`.
+
 ## Testing
 
 Simply do:
@@ -82,3 +84,11 @@ forge test
 ```
 
 It shall test both the polynomial utilities and the `huffd1` contract.
+
+## Further Works
+
+- We can implement approvals with another polynomial too, but time did not permit. Also, there are many optimizations to do in many different places within the code.
+
+- We could also use $p = 2^{160} + 7$, but I wanted all coefficients to be strictly 160-bits, which is not the case with that prime. In fact, the concept works for any prime order, but we would like to use an order that can fit almost all the addresses while being as large as an address.
+
+- Maybe use foundry FFI to generate the basis polynomials during contract creation?

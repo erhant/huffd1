@@ -17,7 +17,7 @@
 
     // shift to remove right-padding
     0x00 mload
-    0xF8 shr
+    0xF8 shr // 0xF8 = 0x100 - 8 * COEFF_SIZE
     0x00 mstore
 
     0x20 0x00 return

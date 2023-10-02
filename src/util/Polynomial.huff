@@ -152,7 +152,12 @@
     dup4        // [o, l, x, s, 32, l]
     sub         // [o, l, x, s, i] (i := l - 32)
 
-    loop_begin:
+    // FIXME: change the name of loop label here to something other
+    // than `loop_begin` and `loop_end` because it clashes with other
+    // outer loops when this macro is called within.
+    // however, when I change all labels to something more specific and long,
+    // it get "byte index 24238 is out of bounds of ..." errors.
+    evall:
     // [o, l, x, s, i]
 
         // loop condition
@@ -160,7 +165,7 @@
         // it shall underflow and this condition will fail nevertheless
         dup4 dup2       // [o, l, x, s, i, l, i]
         lt iszero       // [o, l, x, s, i, i >= l]
-        loop_end jumpi
+        evallend jumpi
 
         // compute memory index
         dup1 dup6       // [o, l, x, s, i, i, o]
@@ -188,8 +193,8 @@
         sub             // [o, l, x, s, i']             (i' := i - 32)
 
     // [o, l, x, s, i]
-    loop_begin jump
-    loop_end:
+    evall jump
+    evallend:
                         // [o, l, x, s, i]
     pop                 // [o, l, x, s]
     swap1               // [o, l, s, x]

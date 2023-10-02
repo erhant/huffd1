@@ -31,7 +31,7 @@
 ////                               STORAGE                                 ////
 ///////////////////////////////////////////////////////////////////////////////
 #define constant BAL_SLOT = 0xbabe69babe69babe69babe69babe69 // balances
-#define constant APV_SLOT = 0xface42face42face42face42face42 // approvals
+// #define constant APV_SLOT = 0xface42face42face42face42face42 // approvals
 
 ///////////////////////////////////////////////////////////////////////////////
 ////                                MACROS                                 ////
