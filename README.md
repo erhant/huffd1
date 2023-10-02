@@ -22,7 +22,7 @@ $$
 p = \mathtt{0xffffffffffffffffffffffffffffffffffffffd1}
 $$
 
-Notice the final hexadecimals, which is where the name of the project comes from. The degree of the polynomial is equal to total supply - 1, so for $n$ tokens we have a polynomial $P$:
+Notice the final hexadecimals, which is where the name of the project comes from. The degree of the polynomial is equal to total supply minus one, so for $n$ tokens we have a polynomial $P$:
 
 $$
 P \in \mathbb{F}_\mathtt{0xffffffffffffffffffffffffffffffffffffffd1}^{n-1}[X]

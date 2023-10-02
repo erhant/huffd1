@@ -34,6 +34,11 @@
 #define function balanceOf(address) view returns (uint256)
 #define function transfer(address, uint256) nonpayable returns ()
 
+// TODOS:
+// #define function transferFrom(address,address,uint256) nonpayable returns ()
+// #define function approve(address,uint256) nonpayable returns ()
+// #define function getApproved(uint256) view returns (address)
+
 ///////////////////////////////////////////////////////////////////////////////
 ////                               STORAGE                                 ////
 ///////////////////////////////////////////////////////////////////////////////
