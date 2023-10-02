@@ -1,6 +1,8 @@
 /// @title Huffd1
 /// @notice SPDX-License-Identifier: MIT
 /// @author erhant <https://github.com/erhant>
+/// @notice An NFT where instead of mappings we use polynomials
+/// over a finite field with a large prime order.
 
 ///////////////////////////////////////////////////////////////////////////////
 ////                              INCLUDES                                 ////

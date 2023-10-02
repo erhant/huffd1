@@ -106,15 +106,24 @@ Returns the string `"FFD1"`.
 
 ## Testing
 
-Simply do:
+You can use the following commands for testing.
 
 ```sh
-forge test
+# run all tests
+forge test -vvv
+
+# run a specific test
+forge test -vvv --mc PolynomialTest
+forge test -vvv --mc Huffd1Test
 ```
 
-It shall test both the polynomial utilities and the `huffd1` contract.
+I use `-vvv` to see reverts in detail.
 
-## Further Works
+## Remarks
+
+- This project was done for the [Huff hackathon](https://huff.sh/hackathon)!
+
+- This is a very inefficient contract both in contract size and gas usage, and was done mostly for the nerd-snipability factors of using polynomials instead of mappings.
 
 - We can implement approvals with another polynomial too, but time did not permit. Also, there are many optimizations to do in many different places within the code.
 
