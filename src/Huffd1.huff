@@ -99,7 +99,10 @@
                         // [t, v, mP, l, c, o]
     add                 // [t, v, mP, l, c] (codeOffset)
     [COEFF_SIZE]        // [t, v, mP, l, c, s] (coefficient size)
-    0xFFFF                // [t, v, mP, l, c, s, mQ] (memOffset)
+    dup4                // [t, v, mP, l, c, s, mP]
+    dup4                // [t, v, mP, l, c, s, mP, l] (length)
+    0x20 mul            // [t, v, mP, l, c, s, mP, l'] (l' := l * 32)
+    add                 // [t, v, mP, l, c, s, mQ] (memory offset)
     dup4                // [t, v, mP, l, c, s, mQ, l] (length)
     POLY_CODECOPY()     // [t, v, mP, l, mQ, l]
     pop swap1           // [t, v, mP, mQ, l]

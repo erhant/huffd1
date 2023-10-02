@@ -11,8 +11,8 @@
     <a href="https://opensource.org/licenses/MIT" target="_blank">
         <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-yellow.svg">
     </a>
-    <a href="./.github/workflows/test.yml" target="_blank">
-        <img alt="Workflow: Tests" src="https://github.com/erhant/huffd1/actions/workflows/tests.yml/badge.svg?branch=main">
+    <a href="./.github/workflows/tests.yml" target="_blank">
+        <img alt="Workflow: Tests" src="https://github.com/erhant/huffd1/actions/workflows/tests.yaml/badge.svg?branch=main">
     </a>
 </p>
 
@@ -65,7 +65,7 @@ To find the balance of an address, iterate over all tokens and call `ownerOf`, c
 
 To transfer a token $t$ from address $a \to b$, update $P(x)$ to be $P(x) + L_t(x)(b - a)$. Here, $L_t(x)$ is the Lagrange basis of the token, defined as a polynomial that is equal to 1 at $t$ and 0 on all other points. These polynomials are computed before deploying the contract, and are stored within the contract bytecode.
 
-We have a Sage script that can export the basis polynomials, one for each token id, as a codetable where the coefficients of each polynomial are concatenated.
+We have a [Sage script](./src/Huffd1.sage) that can export the basis polynomials, one for each token id, as a codetable where the coefficients of each polynomial are concatenated.
 
 ```c
 // basis polynomials coefficients
