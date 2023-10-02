@@ -8,7 +8,7 @@ import {console} from "forge-std/console.sol";
 contract Huffd1Test is Test {
     Huffd1 huffd1;
     address constant OWNER = address(0x1); // small address to work for all orders
-    uint256 constant TOTAL_SUPPLY = 0x03;
+    uint256 constant TOTAL_SUPPLY = 10; // 3
 
     /// @dev Set-up to run before each test.
     function setUp() public {
