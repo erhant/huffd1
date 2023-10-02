@@ -9,7 +9,7 @@ contract PolynomialTest is Test {
     IPolynomial polynomial;
     uint256 constant TOTAL_SUPPLY = 3;
     uint256 constant ORDER = 13;
-    bool constant VERBOSE = true;
+    bool constant VERBOSE = false;
 
     function setUp() public {
         string memory code = vm.readFile("src/test/Polynomial.t.huff");
