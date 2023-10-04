@@ -19,13 +19,13 @@
 `huffd1` is a non-fungible token implementation in Huff, where the ownership of a token is given by the evaluation of a polynomial $P(x)$, defined over the finite field of prime order $p = 2^{160} - 47$, the largest 160-bit prime:
 
 $$
-p = \mathtt{0xffffffffffffffffffffffffffffffffffffffd1}
+p = \mathtt{0xff}\ldots\mathtt{ffd1}
 $$
 
 Notice the final hexadecimals, which is where the name of the project comes from. The degree of the polynomial is equal to total supply minus one, so for $n$ tokens we have a polynomial $P$:
 
 $$
-P \in \mathbb{F}_\mathtt{0xffffffffffffffffffffffffffffffffffffffd1}^{n-1}[X]
+P \in \mathbb{F}_{\mathtt{0xff}\ldots\mathtt{ffd1}}^{n-1}[X]
 $$
 
 At contract deployment, all tokens are owned by the contract owner; and as a result the main polynomial is simply a constant polynomial equal to the owner address $P(x) = \mathtt{owner}$.
