@@ -12,7 +12,14 @@ contract Huffd1Test is Test {
 
     /// @dev Set-up to run before each test.
     function setUp() public {
-        huffd1 = Huffd1(HuffDeployer.deploy_with_args("Huffd1", abi.encode(OWNER)));
+        string memory code = vm.readFile("src/test/Huffd1.t.huff");
+        huffd1 = Huffd1(
+            HuffDeployer.deploy_with_code_args(
+                "Huffd1",
+                code,
+                abi.encode(OWNER)
+            )
+        );
     }
 
     /// @dev Should return correct name and symbol.
@@ -74,19 +81,29 @@ contract Huffd1Test is Test {
         assertEq(huffd1.balanceOf(OWNER), TOTAL_SUPPLY - 1);
         assertEq(huffd1.balanceOf(NEW_OWNER), 1);
     }
+
+    /// @dev Should revert to an invalid function selector.
+    function test_InvalidFunction() public {
+        (bool success, ) = address(huffd1).call("");
+        assertEq(success, false);
+    }
 }
 
 // util/Owned.huff
 interface Owned {
     function owner() external view returns (address owner);
+
     function setOwner(address newOwner) external;
 }
 
 interface Huffd1 is Owned {
     function name() external view returns (string memory name);
+
     function symbol() external view returns (string memory symbol);
 
     function ownerOf(uint256 tokenId) external view returns (address owner);
+
     function balanceOf(address owner) external view returns (uint256 balance);
+
     function transfer(address to, uint256 tokenId) external;
 }

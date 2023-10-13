@@ -1,0 +1,9 @@
+ds-test/=lib/forge-std/lib/ds-test/src/
+forge-std/=lib/forge-std/src/
+foundry-huff/=lib/foundry-huff/src/
+solidity-stringutils/=lib/foundry-huff/lib/solidity-stringutils/
+lib/forge-std:ds-test/=lib/forge-std/lib/ds-test/src/
+lib/foundry-huff:ds-test/=lib/foundry-huff/lib/forge-std/lib/ds-test/src/
+lib/foundry-huff:forge-std/=lib/foundry-huff/lib/forge-std/src/
+lib/foundry-huff:solidity-stringutils/=lib/foundry-huff/lib/solidity-stringutils/
+lib/foundry-huff:stringutils/=lib/foundry-huff/lib/solidity-stringutils/
