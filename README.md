@@ -110,11 +110,11 @@ You can use the following commands for testing.
 
 ```sh
 # run all tests
-forge test -vvv
+forge t -vvv
 
 # run a specific test
-forge test -vvv --mc PolynomialTest
-forge test -vvv --mc Huffd1Test
+forge t -vvv --mc Polynomial
+forge t -vvv --mc Huffd1
 ```
 
 I use `-vvv` to see reverts in detail.

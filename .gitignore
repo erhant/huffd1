@@ -20,3 +20,6 @@ broadcast
 
 # Python
 __pycache__
+
+# VSCODE
+.vscode

@@ -88,10 +88,14 @@ contract PolynomialTest is Test {
 
 interface IPolynomial {
     function eval(uint256 basis, uint256 point) external view returns (uint256 evaluation);
+
     function addEval(uint256 basis1, uint256 basis2, uint256 point) external view returns (uint256 evaluation);
+
     function scaleEval(uint256 basis, uint256 scale, uint256 point) external view returns (uint256 evaluation);
 
     function evalStore(uint256 point) external view returns (uint256 evaluation);
+
     function addStore(uint256 basis) external;
+
     function scaleStore(uint256 scale) external;
 }

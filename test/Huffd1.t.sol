@@ -13,13 +13,7 @@ contract Huffd1Test is Test {
     /// @dev Set-up to run before each test.
     function setUp() public {
         string memory code = vm.readFile("src/test/Huffd1.t.huff");
-        huffd1 = Huffd1(
-            HuffDeployer.deploy_with_code_args(
-                "Huffd1",
-                code,
-                abi.encode(OWNER)
-            )
-        );
+        huffd1 = Huffd1(HuffDeployer.deploy_with_code_args("Huffd1", code, abi.encode(OWNER)));
     }
 
     /// @dev Should return correct name and symbol.
@@ -62,10 +56,35 @@ contract Huffd1Test is Test {
         }
     }
 
+    /// @dev Should transfer tokens correctly.
+    function test_TransferFrom() public {
+        for (uint256 tokenId = 0; tokenId < TOTAL_SUPPLY; ++tokenId) {
+            // owner --> new owner
+            address NEW_OWNER = address(0x9);
+            vm.prank(OWNER);
+            huffd1.transferFrom(OWNER, NEW_OWNER, tokenId);
+            assertEq(huffd1.ownerOf(tokenId), NEW_OWNER);
+
+            // new owner -> another new owner
+            address NEW_NEW_OWNER = address(0x6);
+            vm.prank(NEW_OWNER);
+            huffd1.transferFrom(NEW_OWNER, NEW_NEW_OWNER, tokenId);
+            assertEq(huffd1.ownerOf(tokenId), NEW_NEW_OWNER);
+        }
+    }
+
     /// @dev Should fail to transfer a not-owned token.
-    function testFail_Transfer() public {
-        vm.prank(address(0x5)); // not an owner
+    function testFail_Transfer_NotOwner() public {
+        address NOT_OWNER = address(0x5);
+        vm.prank(NOT_OWNER);
         huffd1.transfer(OWNER, 0);
+    }
+
+    /// @dev Should fail to transferFrom a not-owned token.
+    function testFail_TransferFrom_NotOwner() public {
+        address NOT_OWNER = address(0x5);
+        vm.prank(NOT_OWNER); // not an owner
+        huffd1.transferFrom(NOT_OWNER, NOT_OWNER, 0);
     }
 
     /// @dev Should give corect balance.
@@ -106,4 +125,6 @@ interface Huffd1 is Owned {
     function balanceOf(address owner) external view returns (uint256 balance);
 
     function transfer(address to, uint256 tokenId) external;
+
+    function transferFrom(address from, address to, uint256 tokenId) external;
 }
