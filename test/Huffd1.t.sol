@@ -7,8 +7,11 @@ import {console} from "forge-std/console.sol";
 
 contract Huffd1Test is Test {
     Huffd1 huffd1;
-    address constant OWNER = address(0x1); // small address to work for all orders
-    uint256 constant TOTAL_SUPPLY = 10; // 3
+
+    /// @dev Initial owner, small address works for all orders.
+    address constant OWNER = address(0x1);
+    /// @dev Number of tokens.
+    uint256 constant TOTAL_SUPPLY = 10;
 
     /// @dev Set-up to run before each test.
     function setUp() public {
@@ -89,6 +92,24 @@ contract Huffd1Test is Test {
             vm.prank(NEW_OWNER);
             huffd1.transferFrom(NEW_OWNER, NEW_NEW_OWNER, tokenId);
             assertEq(huffd1.ownerOf(tokenId), NEW_NEW_OWNER);
+        }
+    }
+
+    /// @dev Should transfer tokens correctly.
+    function test_Approve_then_TransferFrom() public {
+        for (uint256 tokenId = 0; tokenId < TOTAL_SUPPLY; ++tokenId) {
+            address NEW_OWNER = address(0x9);
+
+            // owner approves new owner
+            vm.prank(OWNER);
+            huffd1.approve(NEW_OWNER, tokenId);
+
+            // new owner initiates transferFrom
+            vm.prank(NEW_OWNER);
+            huffd1.transferFrom(OWNER, NEW_OWNER, tokenId);
+            assertEq(huffd1.ownerOf(tokenId), NEW_OWNER);
+
+            // TODO: what happens to approval here?
         }
     }
 
