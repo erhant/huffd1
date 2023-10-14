@@ -158,6 +158,8 @@
 #define macro TRANSFER_FROM() = takes (0) returns (0) {
     0x44 calldataload       // [t] (tokenId)
     
+    // TODO: assert that token is approved to `to` address
+
     // load ownership polynomial
     0x00                    // [t, m] (memoryOffset)
     LOAD_POLY(OWN_SLOT)     // [t, m, l]
@@ -187,7 +189,7 @@
     0x00                    // [t, m] (memoryOffset)
     LOAD_POLY(OWN_SLOT)     // [t, m, l]
 
-    // assert that token is owner by `from` address
+    // assert that token is owner the caller
     dup3                    // [t, m, l, t]
     POLY_EVAL(ORDER)        // [t, m, l, o] (owner)
     caller                  // [t, m, l, o, a] (from address)
@@ -209,10 +211,22 @@
 #define macro APPROVE() = takes (0) returns (0) {
     0x24 calldataload       // [t] (tokenId)
 
-    // TODO: caller must own the token
-     
-    // load approval polynomial
+    // load ownership polynomial
     0x00                    // [t, m] (memoryOffset)
+    LOAD_POLY(OWN_SLOT)     // [t, m, l]
+
+    // assert that token is owner the caller
+    dup3                    // [t, m, l, t]
+    POLY_EVAL(ORDER)        // [t, m, l, o] (owner)
+    caller                  // [t, m, l, o, a] (from address)
+    eq                      // [t, m, l, a == o]
+    success jumpi
+    0x00 0x00 revert
+    success: 
+     
+    
+    // load approval polynomial (can override the prev poly)
+    pop                     // [t, m] (same memoryOffset)
     LOAD_POLY(APV_SLOT)     // [t, m, l]
 
     // get current aproval
