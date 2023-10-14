@@ -41,8 +41,9 @@ contract Huffd1Test is Test {
 
     /// @dev Should have no approved tokens at the start.
     function test_InitialTokenApprovals() public {
+        address ZERO = address(0);
         for (uint256 tokenId = 0; tokenId < TOTAL_SUPPLY; ++tokenId) {
-            assertEq(huffd1.ownerOf(tokenId), OWNER);
+            assertEq(huffd1.getApproved(tokenId), ZERO);
         }
     }
 
@@ -60,6 +61,17 @@ contract Huffd1Test is Test {
             vm.prank(NEW_OWNER);
             huffd1.transfer(NEW_NEW_OWNER, tokenId);
             assertEq(huffd1.ownerOf(tokenId), NEW_NEW_OWNER);
+        }
+    }
+
+    /// @dev Should approve tokens correctly.
+    function test_Approve() public {
+        for (uint256 tokenId = 0; tokenId < TOTAL_SUPPLY; ++tokenId) {
+            address APPROVAL = address(0x9);
+            vm.prank(OWNER);
+            huffd1.approve(APPROVAL, tokenId);
+            assertEq(huffd1.ownerOf(tokenId), OWNER);
+            assertEq(huffd1.getApproved(tokenId), APPROVAL);
         }
     }
 
@@ -92,6 +104,13 @@ contract Huffd1Test is Test {
         address NOT_OWNER = address(0x5);
         vm.prank(NOT_OWNER); // not an owner
         huffd1.transferFrom(NOT_OWNER, NOT_OWNER, 0);
+    }
+
+    /// @dev Should not approve a non-owned token.
+    function testFail_Approve_NotOwner() public {
+        address NOT_OWNER = address(0x5);
+        vm.prank(NOT_OWNER);
+        huffd1.approve(NOT_OWNER, 0);
     }
 
     /// @dev Should give corect balance.
