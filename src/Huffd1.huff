@@ -64,44 +64,44 @@
     // output;             [m, l] (memoryOffset, length)
 }
 
-/// @dev Updates a polynomial so that P(t) = a becomes P(t) = b.
-#define macro UPDATE_POLY(slot) = takes (3) returns (0) {
-    // input:           // [t, b, a] (point, new, old)
+/// @dev Updates a polynomial so that P(t) = a becomes P(t) = b
+/// where P is stored in memory at mP with l coefficients.
+///
+/// Returns the given tokenId in the stack.
+#define macro UPDATE_POLY(poly) = takes (5) returns (1) {
+    // input:           // [t, mP, l, b, a] (point, memOffset, len, new, old)
+    // TODO: maybe take `old, new` instead?
 
     // find scale amount
-    [ORDER] sub         // [t, b, -a] (-a = p - a) in field
-    add                 // [t, v] (v := b - a)
-
-    // load approval polynomial
-    // TODO: load outside
-    0x00                // [t, v, mP] (memoryOffset)
-    LOAD_POLY(APV_SLOT) // [t, v, mP, l]
+    [ORDER] sub         // [t, mP, l, b, -a] (-a = p - a) in field
+    add                 // [t, mP, l, v] (v := b - a)
 
     // load basis polynomial
-    __tablestart(Basis) // [t, v, mP, l, c]
-    dup5                // [t, v, mP, l, c, t]
+    __tablestart(Basis) // [t, mP, l, v, c]
+    dup4                // [t, mP, l, v, c, t]
     POLY_OFFSET(COEFF_SIZE, TOTAL_SUPPLY)
-                        // [t, v, mP, l, c, o]
-    add                 // [t, v, mP, l, c] (codeOffset)
-    [COEFF_SIZE]        // [t, v, mP, l, c, s] (coefficient size)
-    dup4 dup4           // [t, v, mP, l, c, s, mP, l]
-    0x20 mul            // [t, v, mP, l, c, s, mP, l'] (l' := l * 32)
-    add                 // [t, v, mP, l, c, s, mQ] (memory offset)
-    dup4                // [t, v, mP, l, c, s, mQ, l]
-    POLY_CODECOPY()     // [t, v, mP, l, mQ, l]
-    pop swap1           // [t, v, mP, mQ, l]
+                        // [t, mP, l, v, c, o]
+    add                 // [t, mP, l, v, c] (codeOffset)
+    [COEFF_SIZE]        // [t, mP, l, v, c, s] (coefficient size)
+    dup4 dup4           // [t, mP, l, v, c, s, mP, l]
+    0x20 mul            // [t, mP, l, v, c, s, mP, l'] (l' := l * 32)
+    add                 // [t, mP, l, v, c, s, mQ] (memory offset)
+    dup4                // [t, mP, l, v, c, s, mQ, l]
+    POLY_CODECOPY()     // [t, mP, l, v, mQ, l]
+    pop                 // [t, mP, l, v, mQ]
+    swap2               // [t, mP, mQ, v, l]
+    swap1               // [t, mP, mQ, l, v]
 
     // scale basis polynomial with (b - a)
-    dup4                // [t, v, mP, mQ, l, v]
-    POLY_SCALE(ORDER)   // [t, v, mP, mQ, l]
+    POLY_SCALE(ORDER)   // [t, mP, mQ, l]
 
     // add scaled basis polynomial to balance polynomial
-    POLY_ADD(ORDER)     // [t, v, mP, l]
+    POLY_ADD(ORDER)     // [t, mP, l]
 
     // store the new polynomial
-    [APV_SLOT] swap1    // [t, v, mP, sQ, l]
-    POLY_SSTORE()       // [t, v, sQ, l]
-    pop pop pop pop     // []
+    <poly> swap1        // [t, mP, sQ, l]
+    POLY_SSTORE()       // [t, sQ, l]
+    pop pop             // [t]
 }
 
 
@@ -140,106 +140,93 @@
 }
 
 /// @dev takes a token id, and replaces it with the address that is approved for that token.
-#define macro GET_APPROVED() = takes (1) returns (1) {
-    // input:              [t] (tokenId)
+#define macro GET_APPROVED() = takes (0) returns (0) {
+    0x04 calldataload   // [t] (tokenId)
     0x00                // [t, m] (memoryOffset)
     LOAD_POLY(APV_SLOT) // [t, m, l]
     dup3                // [t, m, l, t] (token id)
     POLY_EVAL(ORDER)    // [t, m, l, a] (address)
     swap3               // [a, m, l, t]
     pop pop pop         // [a]
-    // output:             [a] (approved address)
+    0x00 mstore         // []  (mem[0] := a)
+    0x20 0x00 return
 }
 
 /// @dev Takes a token id, a source and destination address
-#define macro TRANSFER_FROM() = takes (3) returns (0) {
-    // input:           // [t, b, a] (token, to, from)
+#define macro TRANSFER_FROM() = takes (0) returns (0) {
+    0x44 calldataload       // [t] (tokenId)
+    
+    // load ownership polynomial
+    0x00                    // [t, m] (memoryOffset)
+    LOAD_POLY(OWN_SLOT)     // [t, m, l]
 
-    // assert that token is owned by `from`
-    dup3 OWNER_OF()     // [t, b, a, o] (owner of t)
-    dup2 eq             // [t, b, a, a == o]
+    // assert that token is owner by `from` address
+    dup3                    // [t, m, l, t]
+    POLY_EVAL(ORDER)        // [t, m, l, o] (owner)
+    0x04 calldataload       // [t, m, l, o, a] (from address)
+    dup2 eq                 // [t, m, l, o, a, a == o]
     success jumpi
     0x00 0x00 revert
-    success:
+    success: 
 
-    // find scale amount
-    [ORDER] sub         // [t, b, -a] (-a = p - a) in field
-    add                 // [t, v] (v := b - a)
+    // update polynomial
+    0x24 calldataload       // [t, m, l, o, a, b] (to address)
+    swap2 pop               // [t, m, l, b, a]
+    UPDATE_POLY(OWN_SLOT)   // [t]
 
+    0x00 0x00 return
+}
+
+/// @dev Takes a token id, a source and destination address
+#define macro TRANSFER() = takes (0) returns (0) {
+    0x24 calldataload       // [t] (tokenId)
+    
     // load ownership polynomial
-    // TODO: do this only once + use with OWNER_OF
-    0x00                // [t, v, mP] (memoryOffset)
-    LOAD_POLY(OWN_SLOT) // [t, v, mP, l]
+    0x00                    // [t, m] (memoryOffset)
+    LOAD_POLY(OWN_SLOT)     // [t, m, l]
 
-    // load basis polynomial
-    __tablestart(Basis) // [t, v, mP, l, c]
-    dup5                // [t, v, mP, l, c, t]
-    POLY_OFFSET(COEFF_SIZE, TOTAL_SUPPLY)
-                        // [t, v, mP, l, c, o]
-    add                 // [t, v, mP, l, c] (codeOffset)
-    [COEFF_SIZE]        // [t, v, mP, l, c, s] (coefficient size)
-    dup4 dup4           // [t, v, mP, l, c, s, mP, l]
-    0x20 mul            // [t, v, mP, l, c, s, mP, l'] (l' := l * 32)
-    add                 // [t, v, mP, l, c, s, mQ] (memory offset)
-    dup4                // [t, v, mP, l, c, s, mQ, l]
-    POLY_CODECOPY()     // [t, v, mP, l, mQ, l]
-    pop swap1           // [t, v, mP, mQ, l]
+    // assert that token is owner by `from` address
+    dup3                    // [t, m, l, t]
+    POLY_EVAL(ORDER)        // [t, m, l, o] (owner)
+    caller                  // [t, m, l, o, a] (from address)
+    dup2 eq                 // [t, m, l, o, a, a == o]
+    success jumpi
+    0x00 0x00 revert
+    success: 
 
-    // scale basis polynomial with (b - a)
-    dup4                // [t, v, mP, mQ, l, v]
-    POLY_SCALE(ORDER)   // [t, v, mP, mQ, l]
+    // update polynomial
+    0x04 calldataload       // [t, m, l, o, a, b] (to address)
+    swap2 pop               // [t, m, l, b, a]
+    UPDATE_POLY(OWN_SLOT)   // [t]
 
-    // add scaled basis polynomial to balance polynomial
-    POLY_ADD(ORDER)     // [t, v, mP, l]
-
-    // store the new polynomial
-    [OWN_SLOT] swap1    // [t, v, mP, sQ, l]
-    POLY_SSTORE()       // [t, v, sQ, l]
-    pop pop pop pop     // []
+    0x00 0x00 return
 }
 
 /// @dev Takes a token id, a source and destination address, approves the
 /// given token id to the destination address if source owns it.
-#define macro APPROVE() = takes (3) returns (0) {
-    // input:           // [t, b, a] (token, to, from)
+#define macro APPROVE() = takes (0) returns (0) {
+    0x24 calldataload       // [t] (tokenId)
 
-    // find scale amount
-    [ORDER] sub         // [t, b, -a] (-a = p - a) in field
-    add                 // [t, v] (v := b - a)
-
+    // TODO: caller must own the token
+     
     // load approval polynomial
-    0x00                // [t, v, mP] (memoryOffset)
-    LOAD_POLY(APV_SLOT) // [t, v, mP, l]
+    0x00                    // [t, m] (memoryOffset)
+    LOAD_POLY(APV_SLOT)     // [t, m, l]
 
-    // load basis polynomial
-    __tablestart(Basis) // [t, v, mP, l, c]
-    dup5                // [t, v, mP, l, c, t]
-    POLY_OFFSET(COEFF_SIZE, TOTAL_SUPPLY)
-                        // [t, v, mP, l, c, o]
-    add                 // [t, v, mP, l, c] (codeOffset)
-    [COEFF_SIZE]        // [t, v, mP, l, c, s] (coefficient size)
-    dup4 dup4           // [t, v, mP, l, c, s, mP, l]
-    0x20 mul            // [t, v, mP, l, c, s, mP, l'] (l' := l * 32)
-    add                 // [t, v, mP, l, c, s, mQ] (memory offset)
-    dup4                // [t, v, mP, l, c, s, mQ, l]
-    POLY_CODECOPY()     // [t, v, mP, l, mQ, l]
-    pop swap1           // [t, v, mP, mQ, l]
+    // get current aproval
+    dup4                    // [t, m, l, t]
+    POLY_EVAL(ORDER)        // [t, m, l, a]
 
-    // scale basis polynomial with (b - a)
-    dup4                // [t, v, mP, mQ, l, v]
-    POLY_SCALE(ORDER)   // [t, v, mP, mQ, l]
+    // update with the new approve address
+    0x04 calldataload       // [t, m, l, a, b]
+    swap1                   // [t, m, l, b, a]
+    UPDATE_POLY(APV_SLOT)   // [t]
 
-    // add scaled basis polynomial to balance polynomial
-    POLY_ADD(ORDER)     // [t, v, mP, l]
-
-    // store the new polynomial
-    [APV_SLOT] swap1    // [t, v, mP, sQ, l]
-    POLY_SSTORE()       // [t, v, sQ, l]
-    pop pop pop pop     // []
+    0x00 0x00 return
 }
 
-#define macro BALANCE_OF() = takes (1) returns (1) {
-    // input:           // [a] (address)
+#define macro BALANCE_OF() = takes (0) returns (0) {
+    0x04 calldataload   // [a] (address)
 
     // load ownership polynomial once at the start
     0x00                // [a, m] (memoryOffset)
@@ -283,7 +270,9 @@
     pop pop             // [a, m, s]
     swap2               // [s, m, a]
     pop pop             // [s]
-    // output:          // [s] (total balance)
+
+    0x00 mstore         // []  (mem[0] := s)
+    0x20 0x00 return
 }
 
 
@@ -322,35 +311,15 @@
         0x00 mstore         // []  (mem[0] := a)
         0x20 0x00 return
     transfer:
-        0x24 calldataload   // [t] (tokenId)
-        0x04 calldataload   // [t, b] (to address)
-        caller              // [t, b, a] (from address)
-        TRANSFER_FROM()     // []
-        0x00 0x00 return
+        TRANSFER()
     transferFrom:
-        // TODO: assert caller owns the token
-        0x44 calldataload   // [t] (tokenId)
-        0x24 calldataload   // [t, b] (to address)
-        0x04 calldataload   // [t, b, a] (from address)
-        TRANSFER_FROM()     // []
-        0x00 0x00 return
+        TRANSFER_FROM()
     getApproved:
-        0x04 calldataload   // [t] (tokenId)
-        GET_APPROVED()      // [a] (address)
-        0x00 mstore         // []  (mem[0] := a)
-        0x20 0x00 return
+        GET_APPROVED()
     approve:
-        // TODO: assert caller owns the token
-        0x24 calldataload   // [t] (tokenId)
-        0x04 calldataload   // [t, b] (to address)
-        dup2 GET_APPROVED() // [t, b, a] (current approval)
-        APPROVE()           // []
-        0x00 0x00 return
+        APPROVE()
     balanceOf:
-        0x04 calldataload   // [a] (address)
-        BALANCE_OF()        // [s] (balance)
-        0x00 mstore         // []  (mem[0] := s)
-        0x20 0x00 return
+        BALANCE_OF()
 
     no_match:
 }
