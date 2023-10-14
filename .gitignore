@@ -9,9 +9,6 @@ node_modules/
 cache/
 out/
 
-# Vscode
-.vscode/
-
 # huffc artifacts
 artifacts
 
@@ -23,3 +20,6 @@ broadcast
 
 # Python
 __pycache__
+
+# VSCODE
+.vscode

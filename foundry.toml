@@ -7,11 +7,8 @@ optimizer = true
 optimizer_runs = 200 # Default amount
 ffi = true
 fuzz_runs = 1_000
-remappings = [
-  "forge-std=lib/forge-std/src/",
-  "foundry-huff=lib/foundry-huff/src/",
-]
 
 fs_permissions = [
-    { access = "read", path = "./src/test/Polynomial.t.huff" }
+    { access = "read", path = "./src/test/Polynomial.t.huff" },
+    { access = "read", path = "./src/test/Huffd1.t.huff" }
 ]
