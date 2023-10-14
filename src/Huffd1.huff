@@ -34,10 +34,10 @@
 #define function symbol() nonpayable returns (string)
 #define function ownerOf(uint256) view returns (address)
 #define function balanceOf(address) view returns (uint256)
+#define function getApproved(uint256) view returns (address)
+#define function approve(address,uint256) nonpayable returns ()
 #define function transfer(address, uint256) nonpayable returns ()
 #define function transferFrom(address,address,uint256) nonpayable returns ()
-// #define function approve(address,uint256) nonpayable returns ()
-// #define function getApproved(uint256) view returns (address)
 
 ///////////////////////////////////////////////////////////////////////////////
 ////                               STORAGE                                 ////
@@ -53,7 +53,7 @@
 ////                                MACROS                                 ////
 ///////////////////////////////////////////////////////////////////////////////
 
-/// @dev Utility function to SLOAD a polynomial at a storage slot 
+/// @notice Utility function to SLOAD a polynomial at a storage slot 
 /// to the memory at the given memory slot.
 #define macro LOAD_POLY(slot) = takes (1) returns (2) {
     // input:              [m] (memoryOffset)
@@ -64,24 +64,25 @@
     // output;             [m, l] (memoryOffset, length)
 }
 
-/// @dev Returns the string "Huffd1".
+/// @notice Returns the string "Huffd1".
 #define macro NAME() = takes (0) returns (0) {
-    0x20 0x00 mstore            // offset
-    0x06 0x20 mstore            // length (12 hex chars, 6 bytes)
-    __RIGHTPAD(0x487566666431)  // "Huffd1"
-    0x40 mstore
+    0x20 0x00 mstore            // []   (mem[0] := offset) (32)
+    0x06 0x20 mstore            // []   (mem[32] := length) (12 hex chars, 6 bytes)
+    __RIGHTPAD(0x487566666431)  // [s]  (s := "Huffd1")
+    0x40 mstore                 // []   (mem[64] := s)
     0x60 0x00 return
 }
 
-/// @dev Returns the symbol "FFD1".
+/// @notice Returns the string "FFD1".
 #define macro SYMBOL() = takes (0) returns (0) {
-    0x20 0x00 mstore            // offset
-    0x04 0x20 mstore            // length (8 hex chars, 4 bytes)
-    __RIGHTPAD(0x46464431)      // "FFD1"
-    0x40 mstore
+    0x20 0x00 mstore            // []   (mem[0] := offset) (32)
+    0x04 0x20 mstore            // []   (mem[32] := length) (8 hex chars, 4 bytes)
+    __RIGHTPAD(0x46464431)      // [s]  (s := "FFD1")
+    0x40 mstore                 // []   (mem[64] := s)
     0x60 0x00 return
 }
 
+/// @notice takes a token id, and replaces it with the owner of that token.
 #define macro OWNER_OF() = takes (1) returns (1) {
     // input:              [t] (tokenId)
     0x00                // [t, m] (memoryOffset)
@@ -93,27 +94,36 @@
     // output:             [a] (owner)
 }
 
+/// @notice takes a token id, and replaces it with the address that is approved for that token.
+#define macro GET_APPROVED() = takes (1) returns (1) {
+    // input:              [t] (tokenId)
+    0x00                // [t, m] (memoryOffset)
+    LOAD_POLY(APV_SLOT) // [t, m, l]
+    dup3                // [t, m, l, t] (token id)
+    POLY_EVAL(ORDER)    // [t, m, l, a] (address)
+    swap3               // [a, m, l, t]
+    pop pop pop         // [a]
+    // output:             [a] (approved address)
+}
+
+/// @notice Takes a token id, a source and destination address, and transfers the token if valid.
 #define macro TRANSFER_FROM() = takes (3) returns (0) {
-    // input:           // [t, b, a] (token, to, from)
+    // input:           // [t, b, a] (token, to, from)  
 
     // assert that token is owned by `from`
     dup3 OWNER_OF()     // [t, b, a, o] (owner of t)
     dup2 eq             // [t, b, a, a == o]
     success jumpi
-
-    // OR, assert that token is approved to `to`
-    // TODO: implement
-
     0x00 0x00 revert
-    success:
-
+    success: 
+    
     // find scale amount
     [ORDER] sub         // [t, b, -a] (-a = p - a) in field
     add                 // [t, v] (v := b - a)
 
-    // load ownership polynomial
-    0x00                // [t, v, mP] (memoryOffset)
-    LOAD_POLY(OWN_SLOT) // [t, v, mP, l]
+    // load ownership polynomial, can load to same memory slot 
+    0x00                // [t, b, a, mP] (memoryOffset)
+    LOAD_POLY(OWN_SLOT) // [t, b, a, mP, l]
 
     // load basis polynomial
     __tablestart(Basis) // [t, v, mP, l, c]
@@ -191,6 +201,7 @@
     pop                 // [s]
     // output:          // [s] (total balance)
 }
+ 
 
 ///////////////////////////////////////////////////////////////////////////////
 ////                               MAIN                                    ////
@@ -212,6 +223,7 @@
     dup1 __FUNC_SIG(ownerOf)        eq ownerOf          jumpi
     dup1 __FUNC_SIG(transfer)       eq transfer         jumpi
     dup1 __FUNC_SIG(balanceOf)      eq balanceOf        jumpi
+    dup1 __FUNC_SIG(getApproved)    eq getApproved      jumpi
     dup1 __FUNC_SIG(transferFrom)   eq transferFrom     jumpi
     no_match jump
 
@@ -222,38 +234,31 @@
     ownerOf:
         0x04 calldataload   // [t] (tokenId)
         OWNER_OF()          // [a] (address)
-        0x00 mstore         // []
-        0x20 0x00 return    // []
+        0x00 mstore         // []  (mem[0] := a)
+        0x20 0x00 return
     transfer:
         0x24 calldataload   // [t] (tokenId)
         0x04 calldataload   // [t, b] (to address)
         caller              // [t, b, a] (from address)
         TRANSFER_FROM()     // []
-        0x00 0x00 return    // []
+        0x00 0x00 return
     transferFrom:
         0x44 calldataload   // [t] (tokenId)
         0x24 calldataload   // [t, b] (to address)
         0x04 calldataload   // [t, b, a] (from address)
         TRANSFER_FROM()     // []
-        0x00 0x00 return    // []
+        0x00 0x00 return
     balanceOf:
         0x04 calldataload   // [a] (address)
         BALANCE_OF()        // [s] (balance)
-        0x00 mstore         // []   
-        0x20 0x00 return    // []
+        0x00 mstore         // []  (mem[0] := s)
+        0x20 0x00 return
+    getApproved:
+        0x04 calldataload   // [t] (tokenId)
+        GET_APPROVED()      // [a] (address)
+        0x00 mstore         // []  (mem[0] := a)
+        0x20 0x00 return
+
 
     no_match:
-}
-
-///////////////////////////////////////////////////////////////////////////////
-////                              WRAPPERS                                 ////
-///////////////////////////////////////////////////////////////////////////////
-#define macro CONSTRUCTOR() = takes (0) returns (0) {
-    HUFFD1_CONSTRUCTOR()
-}
-
-#define macro MAIN() = takes (0) returns (0) {
-    0x00 calldataload 0xE0 shr
-    HUFFD1_MAIN()
-    0x00 0x00 revert
 }

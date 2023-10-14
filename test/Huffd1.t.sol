@@ -33,7 +33,14 @@ contract Huffd1Test is Test {
     }
 
     /// @dev Should own tokens at the start.
-    function test_TokenOwnership() public {
+    function test_InitialTokenOwners() public {
+        for (uint256 tokenId = 0; tokenId < TOTAL_SUPPLY; ++tokenId) {
+            assertEq(huffd1.ownerOf(tokenId), OWNER);
+        }
+    }
+
+    /// @dev Should have no approved tokens at the start.
+    function test_InitialTokenApprovals() public {
         for (uint256 tokenId = 0; tokenId < TOTAL_SUPPLY; ++tokenId) {
             assertEq(huffd1.ownerOf(tokenId), OWNER);
         }
@@ -127,4 +134,8 @@ interface Huffd1 is Owned {
     function transfer(address to, uint256 tokenId) external;
 
     function transferFrom(address from, address to, uint256 tokenId) external;
+
+    function getApproved(uint256 tokenId) external view returns (address approved);
+
+    function approve(address to, uint256 tokenId) external;
 }
