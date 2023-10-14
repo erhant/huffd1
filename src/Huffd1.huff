@@ -69,24 +69,25 @@
 ///
 /// Returns the given tokenId in the stack.
 #define macro UPDATE_POLY(poly) = takes (5) returns (1) {
-    // input:           // [t, mP, l, b, a] (point, memOffset, len, new, old)
-    // TODO: maybe take `old, new` instead?
-
+    // input:           // [t, mP, l, a, b] (point, memOffset, len, old, new)
+    
     // find scale amount
-    [ORDER] sub         // [t, mP, l, b, -a] (-a = p - a) in field
-    add                 // [t, mP, l, v] (v := b - a)
+    [ORDER]             // [t, mP, l, a, b, p]
+    swap2               // [t, mP, l, p, b, a]
+    dup3 sub            // [t, mP, l, p, b, -a] (-a = p - a) in field
+    addmod              // [t, mP, l, v] (v := b - a) in field
 
     // load basis polynomial
     __tablestart(Basis) // [t, mP, l, v, c]
-    dup4                // [t, mP, l, v, c, t]
+    dup5                // [t, mP, l, v, c, t]
     POLY_OFFSET(COEFF_SIZE, TOTAL_SUPPLY)
                         // [t, mP, l, v, c, o]
     add                 // [t, mP, l, v, c] (codeOffset)
     [COEFF_SIZE]        // [t, mP, l, v, c, s] (coefficient size)
-    dup4 dup4           // [t, mP, l, v, c, s, mP, l]
+    dup5 dup5           // [t, mP, l, v, c, s, mP, l]
     0x20 mul            // [t, mP, l, v, c, s, mP, l'] (l' := l * 32)
     add                 // [t, mP, l, v, c, s, mQ] (memory offset)
-    dup4                // [t, mP, l, v, c, s, mQ, l]
+    dup5                // [t, mP, l, v, c, s, mQ, l]
     POLY_CODECOPY()     // [t, mP, l, v, mQ, l]
     pop                 // [t, mP, l, v, mQ]
     swap2               // [t, mP, mQ, v, l]
@@ -129,14 +130,15 @@
 
 /// @dev takes a token id, and replaces it with the owner of that token.
 #define macro OWNER_OF() = takes (1) returns (1) {
-    // input:              [t] (tokenId)
+    0x04 calldataload   // [t] (tokenId)
     0x00                // [t, m] (memoryOffset)
     LOAD_POLY(OWN_SLOT) // [t, m, l]
     dup3                // [t, m, l, t] (token id)
     POLY_EVAL(ORDER)    // [t, m, l, a] (address)
     swap3               // [a, m, l, t]
     pop pop pop         // [a]
-    // output:             [a] (owner)
+    0x00 mstore         // []  (mem[0] := a)
+    0x20 0x00 return
 }
 
 /// @dev takes a token id, and replaces it with the address that is approved for that token.
@@ -160,18 +162,18 @@
     0x00                    // [t, m] (memoryOffset)
     LOAD_POLY(OWN_SLOT)     // [t, m, l]
 
-    // assert that token is owner by `from` address
+    // assert that token is owned by `from` address
     dup3                    // [t, m, l, t]
     POLY_EVAL(ORDER)        // [t, m, l, o] (owner)
     0x04 calldataload       // [t, m, l, o, a] (from address)
-    dup2 eq                 // [t, m, l, o, a, a == o]
+    eq                      // [t, m, l, a == o]
     success jumpi
     0x00 0x00 revert
     success: 
 
     // update polynomial
-    0x24 calldataload       // [t, m, l, o, a, b] (to address)
-    swap2 pop               // [t, m, l, b, a]
+    0x04 calldataload       // [t, m, l, a] (from address)
+    0x24 calldataload       // [t, m, l, a, b] (to address)
     UPDATE_POLY(OWN_SLOT)   // [t]
 
     0x00 0x00 return
@@ -189,14 +191,14 @@
     dup3                    // [t, m, l, t]
     POLY_EVAL(ORDER)        // [t, m, l, o] (owner)
     caller                  // [t, m, l, o, a] (from address)
-    dup2 eq                 // [t, m, l, o, a, a == o]
+    eq                      // [t, m, l, a == o]
     success jumpi
     0x00 0x00 revert
     success: 
 
     // update polynomial
-    0x04 calldataload       // [t, m, l, o, a, b] (to address)
-    swap2 pop               // [t, m, l, b, a]
+    caller                  // [t, m, l, a] (from address)
+    0x04 calldataload       // [t, m, l, a, b] (to address)
     UPDATE_POLY(OWN_SLOT)   // [t]
 
     0x00 0x00 return
@@ -214,12 +216,11 @@
     LOAD_POLY(APV_SLOT)     // [t, m, l]
 
     // get current aproval
-    dup4                    // [t, m, l, t]
+    dup3                    // [t, m, l, t]
     POLY_EVAL(ORDER)        // [t, m, l, a]
 
     // update with the new approve address
     0x04 calldataload       // [t, m, l, a, b]
-    swap1                   // [t, m, l, b, a]
     UPDATE_POLY(APV_SLOT)   // [t]
 
     0x00 0x00 return
@@ -306,10 +307,7 @@
     symbol:
         SYMBOL()
     ownerOf:
-        0x04 calldataload   // [t] (tokenId)
-        OWNER_OF()          // [a] (address)
-        0x00 mstore         // []  (mem[0] := a)
-        0x20 0x00 return
+        OWNER_OF()
     transfer:
         TRANSFER()
     transferFrom:
