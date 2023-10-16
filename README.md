@@ -86,7 +86,7 @@ $$
 we do:
 
 $$
-a_0 + X(a_1 + X(a_2 + \ldots + X(a_{T_2} + Xa_{T-1}))
+a_0 + X(a_1 + X(a_2 + \ldots + X(a_{T-2} + X(a_{T-1})))
 $$
 
 which also plays nicely with the reverse coefficient form that we use to store the polynomials.
