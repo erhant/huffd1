@@ -30,7 +30,7 @@ $$
 P \in \mathbb{F}_{\mathtt{0xff}\ldots\mathtt{ffd1}}^{n-1}[X]
 $$
 
-Denote that ownership polynomial and approvals polynomial as $B[X]$ and $A[X]$ respectively. At contract deployment, all tokens are owned by the contract owner; and as a result the main polynomial is simply a constant polynomial equal to the owner address $P[X] = \mathtt{owner}$. There are also no approvals at first, so it is also a constant polynomial $A[X] = 0$.
+Denote that ownership polynomial and approvals polynomial as $B[X]$ and $A[X]$ respectively. At contract deployment, all tokens are owned by the contract owner; and as a result the main polynomial is simply a constant polynomial equal to the owner address $B[X] = \mathtt{owner}$. There are also no approvals at first, so it is also a constant polynomial $A[X] = 0$.
 
 ### Updating a Polynomial
 
@@ -44,7 +44,7 @@ $$
 A[X] := A[X] + L_t[X](m - n)
 $$
 
-Note that since we are operating over a finite-field, multiplications will use `MULMOD` and additions will use `ADDMOD`. ALso note that $-a$ is obtained by $p-a$ where $p$ is the order of the finite field.
+Note that since we are operating over a finite-field, multiplications will use `MULMOD` and additions will use `ADDMOD`. Also note that $-a$ is obtained by $p-a$ where $p$ is the order of the finite field.
 
 ### Storing the Basis Polynomials
 
