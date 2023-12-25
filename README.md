@@ -138,8 +138,6 @@ I use `-vvv` to see reverts in detail.
 
 ## Remarks
 
-- This project was done for the [Huff hackathon](https://huff.sh/hackathon)!
+- This project was done for the [Huff hackathon](https://huff.sh/hackathon). In the end, I got the [5th place](https://x.com/0xerhant/status/1713974138895847702?s=20)!
 
 - We could also use $p = 2^{160} + 7$, but I wanted all coefficients to be strictly 160-bits, which is not the case with that prime. In fact, the concept works for any prime order, but we would like to use an order that can fit almost all the addresses while being as large as an address.
-
-- Maybe use foundry FFI to generate the basis polynomials during contract creation?
