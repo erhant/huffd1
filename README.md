@@ -16,6 +16,10 @@
     </a>
 </p>
 
+> [!CAUTION]
+>
+> With [Huff](https://github.com/huff-language/huff-rs) being archived, we've put this to sleep as well. 💤
+
 ## Methodology
 
 `huffd1` is a non-fungible token implementation in Huff, where instead of ownership and approval mappings, we use polynomials $P[X]$ defined over the finite field of prime order $p = 2^{160} - 47$ that is the largest 160-bit prime:
